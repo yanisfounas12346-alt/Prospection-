@@ -95,6 +95,7 @@ public class MapActivity extends Activity {
         if(!url.startsWith("file:///android_asset/radar-map.html"))return;
         pageReady=true;
         sendToPage();
+        if(scanning.get())eval("setRadarBusy","true");
       }
       @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest req){
         if(!req.isForMainFrame())return false;
@@ -111,10 +112,9 @@ public class MapActivity extends Activity {
     receiveShare(getIntent());
     recalculate();
     refreshGeographyIfNecessary();
-    long now=System.currentTimeMillis();
-    long last=prefs.getLong("map_last_scan_at",0L);
-    // Premier démarrage : recherche automatique, sans forcer l'utilisateur à tout configurer.
-    if(last<=0||now-last>30L*60L*1000L)startScan();
+    // Chaque ouverture à froid lance la veille des sources activées, sans action manuelle.
+    // Les notifications des plateformes nécessitent toujours leur autorisation Android.
+    startScan();
   }
 
   @Override protected void onNewIntent(Intent intent){
@@ -133,6 +133,10 @@ public class MapActivity extends Activity {
   @Override protected void onResume(){
     super.onResume();
     if(prefs!=null&&pageReady)recalculate();
+    // Au retour d'une autre application, actualiser si la dernière tentative date
+    // de plus de cinq minutes. Le verrou scanning évite les scans concurrents.
+    if(prefs!=null&&System.currentTimeMillis()-prefs.getLong("map_last_scan_at",0L)
+        >5L*60L*1000L)startScan();
   }
 
   private void eval(String method,String args){
@@ -364,8 +368,10 @@ public class MapActivity extends Activity {
 
   private void startScan(){
     if(!scanning.compareAndSet(false,true))return;
+    // L'heure est conservée pour éviter une boucle au retour de l'application.
     prefs.edit().putLong("map_last_scan_at",System.currentTimeMillis()).apply();
     eval("setRadarBusy","true");
+    eval("setRadarStatus",JSONObject.quote("Recherche automatique des nouvelles demandes en cours…"));
     new Thread(()->{
       String status;
       try {
@@ -377,6 +383,7 @@ public class MapActivity extends Activity {
       final String note=status;
       scanning.set(false);
       runOnUiThread(()->{
+        eval("setRadarBusy","false");
         eval("setRadarStatus",JSONObject.quote(note));
         recalculate();
       });
