@@ -74,6 +74,17 @@ public class MainActivity extends Activity {
     root.addView(label("Demandes de particuliers • Climatisation • Chauffe-eau",14,false));
     root.addView(button("🗺 Carte des opportunités dans le 13",()->
       startActivity(new Intent(this,MapActivity.class))));
+    root.addView(label("SOURCES DE DEMANDES",19,true));
+    root.addView(button("Choisir et connecter les sources compatibles",this::sourceHub));
+    root.addView(label("État : Leboncoin "+(prefs.getBoolean("watch_lbc",true)?"activé":"désactivé")+
+      " • Facebook "+(prefs.getBoolean("watch_fb",false)?"activé":"désactivé")+
+      " • flux RSS "+countSources(prefs.getString("feeds",""))+
+      " • formulaires CSV à importer depuis ce téléphone",12,false));
+    String lastSource=prefs.getString("notification_last_source","");
+    long lastNotif=prefs.getLong("notification_last_at",0);
+    root.addView(label("Notifications examinées : "+prefs.getInt("notification_checked",0)
+      +(lastNotif>0?" | Dernière : "+new java.util.Date(lastNotif).toString()+
+       " ("+lastSource+")":" | Aucune alerte reçue"),12,false));
     root.addView(label("RADAR AUTOMATIQUE",19,true));
     root.addView(label("ALERTES LEBONCOIN / FACEBOOK (avec autorisation)",16,true));
     root.addView(label(notificationAccess()
@@ -124,6 +135,35 @@ public class MainActivity extends Activity {
     updateCount();
     root.addView(label("Les publications détectées ne constituent pas une autorisation de démarchage. Contact uniquement dans un cadre permis et sur demande explicite.",12,false));
   }
+  private void sourceHub(){
+    String[] options={
+      "Alertes Google (RSS ou e-mail)",
+      "Leboncoin (recherches sauvegardées / alertes officielles)",
+      "Facebook (notifications de groupes avec accord)",
+      "Flux RSS / Atom HTTPS autorisés",
+      "Formulaires entrants (import CSV avec nom / téléphone)",
+      "WhatsApp Business (notifications au professionnel)",
+      "Aide : sources, permission et confidentialité"
+    };
+    new AlertDialog.Builder(this).setTitle("Connecteurs compatibles")
+      .setMessage("Sélectionne une source. Un site qui ne fournit pas de flux ou d'API autorisée ne peut pas être raccordé automatiquement.")
+      .setItems(options,(dialog,which)->{
+        switch(which){
+          case 0:openPublicUrl("https://www.google.com/alerts");break;
+          case 1:openPublicUrl("https://www.leboncoin.fr/");break;
+          case 2:openPublicUrl("https://www.facebook.com/groups/");break;
+          case 3:sourceDialog();break;
+          case 4:chooseCsv();break;
+          case 5:
+          case 6:openPublicUrl("https://github.com/yanisfounas12346-alt/Prospection-/blob/main/docs/MISE_EN_SERVICE_RADAR.md");break;
+        }
+      }).setNegativeButton("Fermer",null).show();
+  }
+  private void openPublicUrl(String url){
+    try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
+    catch(Exception e){Toast.makeText(this,"Ouvre le site dans un navigateur.",Toast.LENGTH_SHORT).show();}
+  }
+
   private boolean notificationAccess(){
     try {
       String value=android.provider.Settings.Secure.getString(
