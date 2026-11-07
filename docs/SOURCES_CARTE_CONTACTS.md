@@ -1,5 +1,20 @@
 # Sources compatibles, carte et contacts — France Clim Radar 13
 
+## Sources publiques actives automatiquement depuis la V2.2
+
+**Vérification réelle du 7 novembre 2026 :** les trois sources ont retourné HTTP 200 depuis GitHub Actions, avec respectivement 5 résultats Bluesky, 20 publications pour Mastodon #climatisation et 4 pour Mastodon #chauffeeau. Ce résultat n'est pas un comptage de prospects dans le 13.
+
+- **Bluesky**, API AppView officielle : `https://api.bsky.app/xrpc/app.bsky.feed.searchPosts`. Recherche publique, sans compte : « climatisation », « chauffe-eau », « cumulus », « climatiseur ». Le radar lit les publications accessibles, puis ne retient que les demandes explicites et localisées dans le département 13. Les résultats indiqués par Bluesky sont des publications, **pas des particuliers identifiés comme clients**.
+- **Mastodon**, flux publics RSS : `https://mastodon.social/tags/climatisation.rss` et `https://mastodon.social/tags/chauffeeau.rss`. Ces sources ne donnent pas accès aux publications privées et leurs hashtags ne garantissent pas des besoins locaux.
+- Ces trois sources sont **activées par défaut** dans le Radar 2.2. Elles peuvent être désactivées séparément dans l'interface.
+- Le smartphone demande une veille périodique à Android. **Environ 15 minutes est un intervalle souhaité, pas un délai de résultat garanti**. Les services publics peuvent limiter les requêtes ou être temporairement indisponibles.
+
+Les résultats potentiels arrivent dans le même CRM que les alertes Leboncoin, les flux RSS personnalisés et les formulaires directs. Les liens ouvrent les publications d'origine. Aucun contact automatique n'est initié.
+
+Le radar Python exécuté sur GitHub surveille aussi ces sources lorsqu'un canal d'alerte WhatsApp Business autorisé est configuré. Sans secrets WhatsApp ni modèle de notification approuvé, **aucun WhatsApp automatique n'est envoyé**.
+
+**Reddit n'est pas connecté** : Reddit a annoncé l'arrêt de ses flux RSS publics le 13 novembre 2026 ; cette intégration serait rapidement inutilisable.
+
 ## Ce qui est réellement connecté à la version Android
 
 | Source | Connexion | Nom et téléphone ? |
