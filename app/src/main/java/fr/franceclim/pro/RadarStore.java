@@ -170,6 +170,22 @@ public final class RadarStore {
     return true;
   }
 
+  /** Suppression locale d'un dossier et des coordonnées associées. */
+  public static boolean delete(Context c,int index){
+    synchronized(LOCK){
+      JSONArray before=leads(c);
+      if(index<0||index>=before.length())return false;
+      JSONArray after=new JSONArray();
+      for(int i=0;i<before.length();i++){
+        if(i==index)continue;
+        JSONObject item=before.optJSONObject(i);
+        if(item!=null)after.put(item);
+      }
+      prefs(c).edit().putString("leads",after.toString()).apply();
+      return true;
+    }
+  }
+
   public static void clear(Context c){
     synchronized(LOCK){prefs(c).edit().remove("leads").remove("last_match").apply();}
   }
