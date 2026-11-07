@@ -20,7 +20,7 @@ Zone : **119 communes des Bouches-du-Rhône**, d'après l'INSEE (COG 2026).
    - urgence chauffe-eau, dédoublonnage et conservation d'un lien s'il figure dans le texte ;
    - note sur 100 **heuristique**, pas une probabilité de signature.
 4. **Notifications haute priorité** uniquement si la demande paraît explicite, dans le 13.
-5. **CRM local** : classement des opportunités, proposition de visite gratuite, RDV, suivi de chantier.
+5. **CRM local** : classement des opportunités, proposition de visite gratuite, RDV, suivi de chantier et bouton de partage manuel sur WhatsApp.
 
 **Aucun appel, SMS, message Facebook ou e-mail n'est envoyé automatiquement à un particulier.**
 Les brouillons de réponse ne doivent être utilisés que si le canal et le cadre légal permettent une réponse à la demande.
@@ -38,7 +38,7 @@ Les brouillons de réponse ne doivent être utilisés que si le canal et le cadr
 ## Deux autres sources de veille (facultatives)
 
 - **Flux RSS/Atom autorisés** : dans l'application, ouvrir **Configurer les sources d'annonces RSS** et ajouter une URL HTTPS par ligne. Choisir ensuite **Scanner les sources maintenant**. Android demandera des vérifications périodiques, mais peut les retarder selon l'état de la batterie. Le même CRM reçoit les publications RSS et les notifications des applications sélectionnées.
-- **Veille Python côté GitHub Actions** : le workflow `radar.yml` peut vérifier des flux RSS et un dossier IMAP d'alertes officielles, même quand le téléphone dort. Les alertes Telegram nécessitent des secrets configurés dans GitHub ; aucun identifiant n'est enregistré dans le dépôt.
+- **Veille Python côté GitHub Actions** : le workflow `radar.yml` peut vérifier des flux RSS et un dossier IMAP d'alertes officielles, même quand le téléphone dort. Les alertes WhatsApp automatiques nécessitent l'API officielle WhatsApp Business, un modèle approuvé et des secrets configurés dans GitHub. Aucun jeton ni numéro privé n'est enregistré dans le dépôt.
 
 Pour les étapes exactes : [Guide de mise en service](docs/MISE_EN_SERVICE_RADAR.md).
 
