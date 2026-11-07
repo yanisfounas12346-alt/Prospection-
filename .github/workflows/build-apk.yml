@@ -27,6 +27,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Tester le filtrage local des opportunites
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p build/radar-tests
+          javac -encoding UTF-8 -d build/radar-tests app/src/main/java/fr/franceclim/pro/LeadClassifier.java tests/ClassifierSmoke.java
+          java -cp build/radar-tests fr.franceclim.pro.ClassifierSmoke
+
       - name: Installer les outils Android
         uses: android-actions/setup-android@v4
 
@@ -74,7 +82,7 @@ jobs:
       - name: Publier APK
         uses: actions/upload-artifact@v4
         with:
-          name: France-Clim-Pro-APK
+          name: France-Clim-Pro-RADAR-v2-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
