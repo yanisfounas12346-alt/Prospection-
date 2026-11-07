@@ -1,4 +1,6 @@
-# France Clim Pro Radar 2.1 — carte, sources, coordonnées communiquées
+# France Clim Pro Radar 2.2 — vrais flux publics, carte, contacts communiqués
+
+**Nouveauté 2.2 :** recherche automatique des publications publiques Bluesky via API officielle et surveillance des deux flux RSS publics Mastodon (#climatisation et #chauffeeau), vérifiés HTTP 200 le 7 novembre 2026. Sources activées par défaut dans l'application. Ce sont de vraies publications, mais elles ne sont pas forcément des demandes de particuliers dans le 13. Aucune liste de contacts ni numéro personnel ne peut être obtenu automatiquement à partir d'un profil privé.
 
 **Nouveauté 2.1 :** carte interactive des opportunités par commune du 13, fiches avec **nom et téléphone lorsqu'ils ont été communiqués**, import CSV de demandes reçues directement, dates de visite, sauvegarde et suppression locales. Partage manuel vers WhatsApp. Aucun numéro caché ni nom privé n'est récupéré.
 
