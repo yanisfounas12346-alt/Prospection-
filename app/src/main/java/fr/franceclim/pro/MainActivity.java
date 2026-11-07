@@ -225,11 +225,50 @@ public class MainActivity extends Activity {
           catch(Exception e){Toast.makeText(this,"Lien impossible à ouvrir",Toast.LENGTH_LONG).show();}
         }));
       }
+      card.addView(button("Partager l'alerte sur WhatsApp",()->shareWhatsapp(o)));
       card.addView(button("Mettre à jour le dossier",()->edit(idx)));
       list.addView(card);
       View space=new View(this);space.setMinimumHeight(14);list.addView(space);
     }
   }
+  /** Partage manuel d'un résumé sans coordonnées, vers WhatsApp uniquement. */
+  private void shareWhatsapp(JSONObject item){
+    String value="France Clim Radar 13\\n"+
+      "Demande à vérifier : "+item.optString("type","Travaux")+"\\n"+
+      "Commune : "+item.optString("city","À vérifier")+"\\n"+
+      "Priorité : "+item.optInt("score",0)+"/100\\n"+
+      "Statut : "+item.optString("status","À examiner");
+    String original=item.optString("link","");
+    if(original.startsWith("https://")){
+      try {
+        Uri uri=Uri.parse(original);
+        if(uri.getHost()!=null) {
+          value+="\\nPublication : "+uri.buildUpon().clearQuery().fragment(null).build().toString();
+        }
+      }catch(Exception ignored){}
+    }
+    Intent send=new Intent(Intent.ACTION_SEND);
+    send.setType("text/plain");
+    send.putExtra(Intent.EXTRA_TEXT,value);
+    try {
+      send.setPackage("com.whatsapp");
+      startActivity(send);
+    }catch(Exception personalMissing){
+      try {
+        send.setPackage("com.whatsapp.w4b");
+        startActivity(send);
+      }catch(Exception businessMissing){
+        send.setPackage(null);
+        new AlertDialog.Builder(this)
+          .setTitle("WhatsApp non détecté")
+          .setMessage("Installe WhatsApp ou WhatsApp Business pour partager l'alerte. Tu peux utiliser le menu Partager en attendant.")
+          .setPositiveButton("Ouvrir le menu Partager",(dialog,which)->
+            startActivity(Intent.createChooser(send,"Partager l'alerte")))
+          .setNegativeButton("Annuler",null).show();
+      }
+    }
+  }
+
   private void edit(int index){
     String[] stages={"À vérifier","À qualifier","Contact autorisé","Visite gratuite proposée",
       "RDV confirmé","Visite effectuée","Devis après visite","Chantier signé","Classé"};
