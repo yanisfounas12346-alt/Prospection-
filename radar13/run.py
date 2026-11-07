@@ -208,7 +208,7 @@ def alert_mailbox():
             subject = str(make_header(decode_header(msg.get("Subject", ""))))
             body = msg.get_body(preferencelist=("plain", "html"))
             text = plain(subject+" "+(body.get_content() if body else ""))
-            link_match = re.search(r"https://[^\s<>\\"']+", text)
+            link_match = re.search(r"https://\S+", text)
             url = public_link(link_match.group(0)) if link_match else ""
             item = {"id": fingerprint(subject + text), "text": text, "link": url}
             if alert(item, "Alerte e-mail officielle"):
