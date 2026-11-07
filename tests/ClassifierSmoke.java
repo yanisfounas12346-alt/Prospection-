@@ -23,6 +23,18 @@ public final class ClassifierSmoke {
     expect(!g.eligible,"hors sujet");
     LeadClassifier.Result h=LeadClassifier.classify("Je cherche quelqu'un pour poser un monosplit à La Ciotat.","");
     expect(h.eligible&&"PRIORITAIRE".equals(h.status),"monosplit La Ciotat");
+    LeadClassifier.Result i=LeadClassifier.classify("Je recherche une entreprise pour le remplacement de mon chauffe-eau à Vitrolles.", "");
+    expect(i.eligible&&"PRIORITAIRE".equals(i.status),"je recherche chauffe-eau Vitrolles");
+    LeadClassifier.Result j=LeadClassifier.classify("Connaissez vous un installateur de climatisation sur Marignane ?", "");
+    expect(j.eligible&&j.geoKnown,"recommandation installateur Marignane");
+    LeadClassifier.Result k=LeadClassifier.classify("Mon cumulus ne chauffe plus à Martigues.", "");
+    expect(k.eligible&&k.urgent&&"A_VERIFIER".equals(k.status),"panne a verifier non supprimee");
+    LeadClassifier.Result l=LeadClassifier.classify("Une climatisation est utile en été à Marseille.", "");
+    expect(l.eligible&&"A_VERIFIER".equals(l.status),"mention vague conservee sans alerte urgente");
+    expect(RadarClassifier.analyse("Je recherche un installateur de climatisation à Vitrolles.")!=null,
+      "le filtre RSS accepte les memes demandes locales que le CRM");
+    expect(RadarClassifier.analyse("Recherche installation de climatisation à Lille.")==null,
+      "le flux public hors zone reste écarté");
     System.out.println("OK: "+pass+" tests de qualification.");
   }
 }
