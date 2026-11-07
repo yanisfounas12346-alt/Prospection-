@@ -45,8 +45,8 @@ public final class RadarScanner {
     // Ils ne donnent accès qu'aux publications publiques du réseau indiqué.
     StringBuilder all=new StringBuilder();
     if(prefs.getBoolean("watch_mastodon",true)){
-      all.append("https://mastodon.social/tags/climatisation.rss\\n");
-      all.append("https://mastodon.social/tags/chauffeeau.rss\\n");
+      all.append("https://mastodon.social/tags/climatisation.rss\n");
+      all.append("https://mastodon.social/tags/chauffeeau.rss\n");
     }
     all.append(prefs.getString("feeds","").trim());
     String configured=all.toString().trim();
