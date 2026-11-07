@@ -28,7 +28,7 @@ jobs:
           java-version: '17'
 
       - name: Installer les outils Android
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Installer Android SDK 35 explicitement
         shell: bash
