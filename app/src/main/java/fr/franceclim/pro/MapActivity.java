@@ -38,6 +38,7 @@ public class MapActivity extends Activity {
   private JSONObject pending;
   private final AtomicBoolean scanning=new AtomicBoolean(false);
   private final AtomicBoolean generating=new AtomicBoolean(false);
+  private final AtomicBoolean geoFetching=new AtomicBoolean(false);
   private SharedPreferences prefs;
 
   private static final class City {
@@ -61,6 +62,8 @@ public class MapActivity extends Activity {
     web=new WebView(this);
     WebSettings settings=web.getSettings();
     settings.setJavaScriptEnabled(true);
+    settings.setUserAgentString(settings.getUserAgentString()+
+      " FranceClimRadar13/2.4 (+https://github.com/yanisfounas12346-alt/Prospection-)");
     settings.setDomStorageEnabled(false);
     settings.setAllowFileAccess(true);
     settings.setAllowContentAccess(false);
@@ -90,6 +93,7 @@ public class MapActivity extends Activity {
     web.loadUrl("file:///android_asset/radar-map.html");
     receiveShare(getIntent());
     recalculate();
+    refreshGeographyIfNecessary();
     long now=System.currentTimeMillis();
     long last=prefs.getLong("map_last_scan_at",0L);
     // Premier démarrage : recherche automatique, sans forcer l'utilisateur à tout configurer.
@@ -268,24 +272,32 @@ public class MapActivity extends Activity {
   }
 
   private Map<String,City> loadCenters(){
+    // Affichage immédiat : aucune requête réseau ne bloque l'écran.
     Map<String,City> result=fallbackCenters();
-    String saved=prefs.getString(GEO_JSON,"");
-    if(!saved.isEmpty())mergeCenters(result,saved);
-    long age=System.currentTimeMillis()-prefs.getLong(GEO_WHEN,0L);
-    if(saved.isEmpty()||age>30L*24*60*60*1000L){
-      try{
-        String fresh=fetchOfficialCenters();
-        mergeCenters(result,fresh);
-        if(result.size()>=110){
-          prefs.edit().putString(GEO_JSON,fresh)
-            .putLong(GEO_WHEN,System.currentTimeMillis()).apply();
-        }
-      }catch(Exception ignored){
-        // La carte reste utilisable depuis le cache ou les grandes communes.
-      }
-    }
+    String cached=prefs.getString(GEO_JSON,"");
+    if(!cached.isEmpty())mergeCenters(result,cached);
     return result;
   }
+  private void refreshGeographyIfNecessary(){
+    long age=System.currentTimeMillis()-prefs.getLong(GEO_WHEN,0L);
+    boolean stale=age>30L*24L*60L*60L*1000L;
+    if(!stale || !geoFetching.compareAndSet(false,true))return;
+    new Thread(()->{
+      try{
+        String json=fetchOfficialCenters();
+        Map<String,City> check=new HashMap<>();
+        mergeCenters(check,json);
+        if(check.size()>=110){
+          prefs.edit().putString(GEO_JSON,json)
+            .putLong(GEO_WHEN,System.currentTimeMillis()).apply();
+          runOnUiThread(()->recalculate());
+        }
+      }catch(Exception ignored){
+        // Hors réseau, la carte se base sur le cache et les centres de secours.
+      }finally{geoFetching.set(false);}
+    },"radar-map-geography").start();
+  }
+
   private static void mergeCenters(Map<String,City> map,String json){
     try {
       JSONArray communes=new JSONArray(json);
