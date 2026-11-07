@@ -1,10 +1,11 @@
 package fr.franceclim.pro;
 
 import android.app.Activity;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.provider.Settings;
 import android.widget.EditText;
@@ -69,6 +70,11 @@ public class MapActivity extends Activity {
     prefs=getSharedPreferences(PREF,Context.MODE_PRIVATE);
     getWindow().setStatusBarColor(Color.rgb(11,40,59));
     getWindow().setNavigationBarColor(Color.rgb(11,40,59));
+    if(android.os.Build.VERSION.SDK_INT>=33 &&
+       checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+         !=PackageManager.PERMISSION_GRANTED){
+      requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},3301);
+    }
     RadarJobService.schedule(this);
     web=new WebView(this);
     WebSettings settings=web.getSettings();
