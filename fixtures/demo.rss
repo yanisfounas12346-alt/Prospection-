@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>France Clim Radar 13 - DEMONSTRATION FICTIVE</title>
+    <description>Publications fictives permettant de tester le classement, pas de vrais prospects.</description>
+    <link>https://github.com/yanisfounas12346-alt/Prospection-</link>
+    <item>
+      <title>Je cherche un plombier pour remplacer mon chauffe-eau à Marseille 13002</title>
+      <link>https://example.org/test/france-clim/ballon-marseille</link>
+      <description>Mon cumulus est HS, plus d'eau chaude chez moi. Je cherche un plombier pour faire remplacer rapidement le ballon électrique.</description>
+      <guid>france-clim-fake-001</guid>
+    </item>
+    <item>
+      <title>Je voudrais installer une climatisation à Martigues</title>
+      <link>https://example.org/test/france-clim/clim-martigues</link>
+      <description>Je cherche un installateur pour poser un multisplit dans ma maison à Martigues (13500).</description>
+      <guid>france-clim-fake-002</guid>
+    </item>
+    <item>
+      <title>Je vends ma climatisation occasion à Istres</title>
+      <link>https://example.org/test/france-clim/vente-istres</link>
+      <description>A vendre climatiseur mobile en bon état. Aucune installation nécessaire.</description>
+      <guid>france-clim-fake-003</guid>
+    </item>
+    <item>
+      <title>Je cherche un installateur de climatisation à Toulon</title>
+      <link>https://example.org/test/france-clim/hors-zone</link>
+      <description>Je cherche un professionnel pour installer la clim dans mon appartement à Toulon 83000.</description>
+      <guid>france-clim-fake-004</guid>
+    </item>
+  </channel>
+</rss>
