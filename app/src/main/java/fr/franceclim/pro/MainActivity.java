@@ -3,228 +3,190 @@ package fr.franceclim.pro;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.view.View;
 import android.widget.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
+/** Tableau de bord du radar et CRM France Clim pour les particuliers. */
 public class MainActivity extends Activity {
-  private final int navy=Color.rgb(16,35,54), teal=Color.rgb(0,126,123), secondary=Color.rgb(91,109,124);
-  private LinearLayout root;
-  private EditText manualText, manualCity;
-  private boolean firstResume=true;
+  private LinearLayout root, list;
+  private EditText city, detail, contact;
+  private Spinner type;
+  private SharedPreferences prefs;
+  private JSONArray leads=new JSONArray();
+  private final int navy=Color.rgb(17,38,60), teal=Color.rgb(0,131,126);
 
-  @Override public void onCreate(Bundle b){
-    super.onCreate(b);
-    render();
-    handleShare(getIntent());
-    if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
-      requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},44);
+  @Override public void onCreate(Bundle state){
+    super.onCreate(state);
+    prefs=getSharedPreferences("franceclim",MODE_PRIVATE);
+    if(Build.VERSION.SDK_INT>=33 &&
+       checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED){
+      requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},10);
+    }
+    RadarJobService.schedule(this);
+    load();render();consumeShare(getIntent());
+  }
+  @Override protected void onNewIntent(Intent intent){
+    super.onNewIntent(intent);setIntent(intent);consumeShare(intent);
+  }
+  @Override protected void onResume(){super.onResume();if(prefs!=null){load();if(root!=null)updateCount();}}
+  private void consumeShare(Intent intent){
+    if(Intent.ACTION_SEND.equals(intent.getAction()) && "text/plain".equals(intent.getType())){
+      String content=intent.getStringExtra(Intent.EXTRA_TEXT);
+      if(content!=null){
+        detail.setText(content);
+        RadarClassifier.Result r=RadarClassifier.analyse(content);
+        if(r!=null){
+          city.setText(r.city);
+          type.setSelection("Chauffe-eau".equals(r.category)?1:0);
+        }
+      }
     }
   }
-  @Override protected void onNewIntent(Intent i){
-    super.onNewIntent(i);setIntent(i);
-    render();handleShare(i);
+  private void load(){
+    try {leads=new JSONArray(prefs.getString("leads","[]"));}
+    catch(Exception e){leads=new JSONArray();}
   }
-  @Override protected void onResume(){
-    super.onResume();
-    if(firstResume)firstResume=false;
-    else if(root!=null)render();
+  private TextView label(String value,int size,boolean bold){
+    TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(navy);
+    if(bold)t.setTypeface(null,1);t.setPadding(6,9,6,9);return t;
   }
-  private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
-  private TextView text(String s,int size,boolean bold,int color){
-    TextView t=new TextView(this);
-    t.setText(s);t.setTextSize(size);t.setTextColor(color);
-    if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-    t.setPadding(0,dp(3),0,dp(3));return t;
-  }
-  private GradientDrawable surface(int color,int radius){
-    GradientDrawable g=new GradientDrawable();g.setColor(color);g.setCornerRadius(dp(radius));return g;
-  }
-  private LinearLayout section(){
-    LinearLayout b=new LinearLayout(this);b.setOrientation(LinearLayout.VERTICAL);b.setPadding(dp(15),dp(13),dp(15),dp(13));
-    b.setBackground(surface(Color.WHITE,15));
-    LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,dp(8),0,dp(8));
-    root.addView(b,p);return b;
-  }
-  private void gap(LinearLayout holder,int height){View v=new View(this);holder.addView(v,new LinearLayout.LayoutParams(1,dp(height)));}
-  private Button button(String label,Runnable onClick){
-    Button b=new Button(this);b.setAllCaps(false);b.setText(label);b.setTextSize(14);
-    b.setTextColor(Color.WHITE);
-    b.setBackgroundTintList(ColorStateList.valueOf(teal));
-    b.setOnClickListener(v->onClick.run());return b;
-  }
-  private EditText input(String hint,int minLines){
-    EditText e=new EditText(this);e.setHint(hint);e.setTextSize(14);e.setTextColor(navy);
-    if(minLines>1){e.setMinLines(minLines);e.setGravity(android.view.Gravity.TOP);}
-    e.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-    return e;
-  }
-  private boolean listenerEnabled(){
-    String v=Settings.Secure.getString(getContentResolver(),"enabled_notification_listeners");
-    return v!=null&&v.contains(getPackageName()+"/");
-  }
-  private void handleShare(Intent i){
-    if(i==null||!Intent.ACTION_SEND.equals(i.getAction())||!"text/plain".equals(i.getType()))return;
-    CharSequence body=i.getCharSequenceExtra(Intent.EXTRA_TEXT);
-    if(body!=null){manualText.setText(body.toString());manualText.requestFocus();}
-    i.setAction(Intent.ACTION_MAIN); // Don't re-import when Android resumes.
+  private EditText input(String hint){EditText e=new EditText(this);e.setHint(hint);return e;}
+  private Button button(String value,Runnable action){
+    Button b=new Button(this);b.setText(value);b.setAllCaps(false);b.setTextColor(Color.WHITE);
+    b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(teal));
+    b.setOnClickListener(v->action.run());return b;
   }
   private void render(){
-    ScrollView scroller=new ScrollView(this);
-    root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(dp(17),dp(24),dp(17),dp(24));
-    root.setBackgroundColor(Color.rgb(242,247,250));
-    scroller.addView(root);setContentView(scroller);
-    TextView logo=text("❄  FRANCE CLIM PRO",23,true,navy);
-    root.addView(logo);
-    root.addView(text("RADAR PARTICULIERS · BOUCHES-DU-RHÔNE (13)",12,true,teal));
-    root.addView(text("Climatisation + chauffe-eau · Visite technique gratuite",13,false,secondary));
-    dashboard();
-    settings();
-    manualCapture();
-    leadInbox();
-    root.addView(text("Veille basée sur les notifications reçues et les contenus que vous partagez. L'app ne scrape aucun site et n'envoie aucun message à des particuliers.",12,false,secondary));
+    ScrollView scroll=new ScrollView(this);
+    root=new LinearLayout(this);root.setOrientation(1);root.setPadding(22,25,22,40);
+    root.setBackgroundColor(Color.rgb(246,249,252));scroll.addView(root);setContentView(scroll);
+    root.addView(label("FRANCE CLIM PRO • RADAR 13",23,true));
+    root.addView(label("Demandes de particuliers • Climatisation • Chauffe-eau",14,false));
+    root.addView(label("RADAR AUTOMATIQUE",19,true));
+    String sources=prefs.getString("feeds","").trim();
+    root.addView(label(sources.isEmpty()?
+      "⚠️ Aucune source RSS configurée : le radar ne peut encore rien détecter.":
+      "Sources configurées : "+countSources(sources)+" • Vérification périodique demandée (~15 min, variable selon Android)",13,false));
+    root.addView(button("Configurer les sources d'annonces RSS",this::sourceDialog));
+    root.addView(button("🔎 Scanner les sources maintenant",this::scanNow));
+    root.addView(label("Dernier passage : "+prefs.getString("scan_status","Jamais"),12,false));
+    root.addView(label("NOUVEAU DOSSIER",19,true));
+    type=new Spinner(this);type.setAdapter(new ArrayAdapter<String>(this,
+       android.R.layout.simple_spinner_dropdown_item,new String[]{"Climatisation","Chauffe-eau"}));
+    root.addView(type);
+    city=input("Ville du département 13");root.addView(city);
+    contact=input("Contact / référence (facultatif)");root.addView(contact);
+    detail=input("Texte de la demande ou lien partagé");detail.setMinLines(2);root.addView(detail);
+    root.addView(button("Enregistrer le dossier",this::saveManual));
+    root.addView(label("OPPORTUNITÉS À EXAMINER",19,true));
+    list=new LinearLayout(this);list.setOrientation(1);root.addView(list);
+    updateCount();
+    root.addView(label("Les publications détectées ne constituent pas une autorisation de démarchage. Contact uniquement dans un cadre permis et sur demande explicite.",12,false));
   }
-  private void dashboard(){
-    JSONArray arr=RadarStore.leads(this);int priority=0,ambiguous=0,visits=0,real=0;
-    for(int i=0;i<arr.length();i++){JSONObject o=arr.optJSONObject(i);if(o==null)continue;
-      if(!"DÉMO".equals(o.optString("source")))real++;
-      if("PRIORITAIRE".equals(o.optString("verdict")))priority++;
-      else ambiguous++;
-      if(o.optString("status").contains("RDV")||o.optString("status").contains("Visite"))visits++;
-    }
-    LinearLayout b=section();
-    b.addView(text("Votre radar",20,true,navy));
-    b.addView(text("Écoute des alertes : "+(listenerEnabled()?"ACTIVÉE ✓":"À ACTIVER")+"  ·  Communes : "+LeadClassifier.COMMUNES.length,13,true,listenerEnabled()?teal:secondary));
-    b.addView(text("Opportunités : "+arr.length()+"   |   Prioritaires : "+priority+"   |   À vérifier : "+ambiguous,14,true,navy));
-    b.addView(text("Dont "+real+" dossiers hors démonstration · Suivis RDV/visite : "+visits,12,false,secondary));
+  private int countSources(String value){
+    int count=0;for(String s:value.split("\\r?\\n"))if(s.trim().startsWith("https://"))count++;return count;
   }
-  private void settings(){
-    LinearLayout b=section();b.addView(text("1. Connecter les alertes du téléphone",18,true,navy));
-    b.addView(text("Vous devez autoriser une fois l'accès aux notifications dans Android. L'application ne conserve que les textes qui concernent la climatisation ou les chauffe-eau.",13,false,secondary));
-    b.addView(button("Activer l'accès aux notifications",()->{
-      Intent i=new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
-      try{startActivity(i);}catch(Exception ex){Toast.makeText(this,"Ouvrez Paramètres > Notifications > Accès aux notifications",Toast.LENGTH_LONG).show();}
-    }));
-    Switch lbc=new Switch(this);lbc.setText("Surveiller les alertes Leboncoin");lbc.setTextColor(navy);
-    lbc.setChecked(getSharedPreferences("franceclim",MODE_PRIVATE).getBoolean("watch_lbc",true));
-    lbc.setOnCheckedChangeListener((v,checked)->RadarStore.setEnabled(this,"watch_lbc",checked));
-    b.addView(lbc);
-    Switch fb=new Switch(this);fb.setText("Surveiller les notifications de groupes Facebook");fb.setTextColor(navy);
-    fb.setChecked(getSharedPreferences("franceclim",MODE_PRIVATE).getBoolean("watch_fb",false));
-    fb.setOnCheckedChangeListener((v,checked)->RadarStore.setEnabled(this,"watch_fb",checked));
-    b.addView(fb);
-    b.addView(text("Confidentialité : Android autorise l'accès global aux notifications, mais le radar ignore les autres applications. Facebook est désactivé par défaut et les messages privés ne sont pas traités.",12,false,secondary));
-    b.addView(text("Sur Leboncoin, sauvegardez des recherches sur le 13 et activez leurs alertes. Les notifications de simples ventes sont souvent rejetées ou signalées « à vérifier ».",12,false,secondary));
-    b.addView(button("Tester avec une demande fictive",()->{
-      String demo="Bonjour, je cherche un plombier pour remplacer mon chauffe-eau HS à Marseille 13008, plus d'eau chaude depuis ce matin. Je souhaite une visite.";
-      RadarStore.AddResult a=RadarStore.add(this,demo,"","DÉMO");
-      String info=a.classification==null?a.reason:a.classification.status+" · "+a.classification.score+"/100 · "+a.reason;
-      new AlertDialog.Builder(this).setTitle("Test du radar").setMessage(info).setPositiveButton("OK",(d,w)->render()).show();
-    }));
-  }
-  private void manualCapture(){
-    LinearLayout b=section();b.addView(text("2. Importer une annonce ou une publication",18,true,navy));
-    b.addView(text("Depuis Leboncoin, Facebook ou Chrome : « Partager » → France Clim Pro. Ou collez le texte ci-dessous.",13,false,secondary));
-    manualCity=input("Ville (facultatif : détectée depuis le texte)",1);b.addView(manualCity);
-    manualText=input("Texte de la demande, avec lien de l'annonce si disponible",3);b.addView(manualText);
-    b.addView(button("Analyser et ajouter au radar",()->{
-      String raw=manualText.getText().toString().trim();
-      if(raw.isEmpty()){Toast.makeText(this,"Collez une demande à analyser",Toast.LENGTH_LONG).show();return;}
-      RadarStore.AddResult ar=RadarStore.add(this,raw,manualCity.getText().toString().trim(),"Partage manuel");
-      String detail=ar.classification==null?ar.reason:
-        ar.classification.status+" • Score "+ar.classification.score+"/100\n"+
-        ar.classification.type+" • "+ar.classification.city+"\n"+ar.classification.reason+"\n\n"+ar.reason;
-      new AlertDialog.Builder(this).setTitle(ar.added?"Demande enregistrée":"Demande non ajoutée")
-         .setMessage(detail).setPositiveButton("OK",(d,w)->{if(ar.added)render();}).show();
-    }));
-  }
-  private void leadInbox(){
-    LinearLayout b=section();b.addView(text("3. Opportunités détectées",18,true,navy));
-    JSONArray a=RadarStore.leads(this);
-    if(a.length()==0){b.addView(text("Aucune demande reçue. Activez les alertes ou utilisez « Tester » pour vérifier le radar.",13,false,secondary));return;}
-    List<Integer> ids=new ArrayList<>();
-    for(int i=0;i<a.length();i++)ids.add(i);
-    Collections.sort(ids,new Comparator<Integer>(){
-      @Override public int compare(Integer x,Integer y){
-        JSONObject xx=a.optJSONObject(x),yy=a.optJSONObject(y);
-        int sx=xx==null?0:xx.optInt("score"),sy=yy==null?0:yy.optInt("score");
-        if(sx!=sy)return sy-sx;
-        long dx=xx==null?0:xx.optLong("date"),dy=yy==null?0:yy.optLong("date");
-        return Long.compare(dy,dx);
-      }
-    });
-    int shown=0;for(int pos:ids){
-      if(shown>=75)break;shown++;
-      JSONObject o=a.optJSONObject(pos);if(o==null)continue;
-      LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-      card.setPadding(dp(10),dp(10),dp(10),dp(12));card.setBackground(surface(Color.rgb(245,250,251),10));
-      LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.setMargins(0,dp(7),0,dp(5));b.addView(card,cp);
-      int score=o.optInt("score",0);
-      card.addView(text(o.optString("type")+"  ·  "+o.optString("city"),16,true,navy));
-      card.addView(text(score+"/100 · "+o.optString("verdict")+" · "+o.optString("source"),12,true,score>=75?teal:secondary));
-      card.addView(text(o.optString("status"),12,true,navy));
-      String d=o.optString("detail");card.addView(text(d.length()>200?d.substring(0,200)+"…":d,13,false,navy));
-      card.addView(button("Ouvrir le dossier et préparer le RDV",()->leadMenu(pos)));
-    }
-    b.addView(button("Effacer les données du radar",()->{
-      new AlertDialog.Builder(this).setTitle("Effacer tous les dossiers ?")
-        .setMessage("Cette opération est définitive et supprime les informations stockées sur ce téléphone.")
-        .setPositiveButton("Effacer",(d,w)->{RadarStore.clear(this);render();})
-        .setNegativeButton("Annuler",null).show();
-    }));
-  }
-  private void leadMenu(int index){
-    JSONObject o=RadarStore.leads(this).optJSONObject(index);if(o==null)return;
-    String[] items={"Proposer une visite technique gratuite (copier un brouillon)",
-      "Changer l'étape commerciale","Ouvrir le lien de l'annonce","Voir les détails"};
-    new AlertDialog.Builder(this).setTitle(o.optString("type")+" · "+o.optString("city"))
-      .setItems(items,(dialog,which)->{
-        if(which==0){
-          String type=o.optString("type").toLowerCase();
-          String message="Bonjour, suite à votre demande concernant "+type+
-            ", France Clim peut vous proposer une visite technique gratuite et sans engagement pour étudier votre installation à "+
-            o.optString("city")+". Souhaitez-vous convenir d'un rendez-vous ?";
-          ClipboardManager cb=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
-          cb.setPrimaryClip(ClipData.newPlainText("Brouillon France Clim",message));
-          new AlertDialog.Builder(this).setMessage("Brouillon copié. À utiliser uniquement si vous êtes autorisé à répondre à cette demande. Aucun message n'a été envoyé.").setPositiveButton("OK",null).show();
-        }else if(which==1)stage(index);
-        else if(which==2){
-          String url=o.optString("link");
-          if(!url.startsWith("https://")&&!url.startsWith("http://")){
-            new AlertDialog.Builder(this).setMessage("Aucun lien n'a été fourni dans cette notification. Ouvrez l'application d'origine pour retrouver la publication.").setPositiveButton("OK",null).show();return;
+  private void sourceDialog(){
+    EditText editor=new EditText(this);
+    editor.setHint("https://exemple.fr/demandes.rss");
+    editor.setText(prefs.getString("feeds",""));
+    editor.setMinLines(4);
+    editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+    new AlertDialog.Builder(this).setTitle("Sources RSS/Atom autorisées")
+      .setMessage("Colle une URL HTTPS par ligne. Exemples : flux de demandes publiques ou Google Alerts RSS. N'ajoute pas une page web HTML ou un site qui interdit la collecte.")
+      .setView(editor)
+      .setPositiveButton("Enregistrer",(d,w)->{
+        String value=editor.getText().toString().trim();
+        for(String u:value.split("\\r?\\n")){
+          if(!u.trim().isEmpty()&&!u.trim().startsWith("#")&&!u.trim().startsWith("https://")){
+            Toast.makeText(this,"URL non HTTPS : "+u,Toast.LENGTH_LONG).show();return;
           }
-          try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
-          catch(Exception e){Toast.makeText(this,"Lien non pris en charge",Toast.LENGTH_SHORT).show();}
-        }else {
-          new AlertDialog.Builder(this).setTitle("Dossier")
-            .setMessage(o.optString("detail")+"\n\n"+o.optString("reason"))
-            .setPositiveButton("OK",null).show();
         }
-      }).show();
-  }
-  private void stage(int index){
-    String[] stages={"À examiner","Demande explicite confirmée","Visite gratuite proposée",
-      "RDV confirmé","Visite effectuée","Devis après visite","Chantier signé","Perdu / non pertinent"};
-    new AlertDialog.Builder(this).setTitle("Suivi commercial")
-      .setItems(stages,(d,k)->{RadarStore.updateStage(this,index,stages[k]);render();})
+        prefs.edit().putString("feeds",value).putBoolean("radar_initialized",false).apply();
+        RadarJobService.schedule(this);render();
+      })
       .setNegativeButton("Annuler",null).show();
+  }
+  private void scanNow(){
+    if(prefs.getString("feeds","").trim().isEmpty()){
+      Toast.makeText(this,"Ajoute d'abord une source RSS.",Toast.LENGTH_LONG).show();return;
+    }
+    Toast.makeText(this,"Analyse en cours…",Toast.LENGTH_SHORT).show();
+    new Thread(()->{
+      RadarScanner.Report report=RadarScanner.scan(getApplicationContext());
+      runOnUiThread(()->{load();render();new AlertDialog.Builder(this).setTitle("Radar : résultat")
+        .setMessage(report.toString()).setPositiveButton("OK",null).show();});
+    },"radar-scan-manuel").start();
+  }
+  private void saveManual(){
+    String c=city.getText().toString().trim(),d=detail.getText().toString().trim();
+    if(c.isEmpty()||d.isEmpty()){
+      Toast.makeText(this,"Ville et description nécessaires.",Toast.LENGTH_SHORT).show();return;
+    }
+    String n=RadarClassifier.normal(d);
+    if(n.contains(" je vends ")||n.contains(" a vendre ")||n.contains(" vente de ")){
+      new AlertDialog.Builder(this).setMessage("Annonce de vente de matériel probable. Enregistrer quand même ?")
+        .setPositiveButton("Oui",(x,y)->store(c,d)).setNegativeButton("Non",null).show();
+    }else store(c,d);
+  }
+  private void store(String c,String d){
+    load();
+    for(int i=0;i<leads.length();i++){
+      if(d.equalsIgnoreCase(leads.optJSONObject(i).optString("detail"))){
+        Toast.makeText(this,"Demande déjà enregistrée",Toast.LENGTH_SHORT).show();return;
+      }
+    }
+    try {
+      JSONObject o=new JSONObject();
+      o.put("city",c);o.put("detail",d);o.put("type",type.getSelectedItem().toString());
+      o.put("contact",contact.getText().toString().trim());
+      o.put("status","À qualifier");o.put("date",System.currentTimeMillis());o.put("score",0);
+      o.put("link","");o.put("automatic",false);leads.put(o);
+      persist();render();
+    }catch(Exception e){Toast.makeText(this,"Échec d'enregistrement",Toast.LENGTH_LONG).show();}
+  }
+  private void persist(){prefs.edit().putString("leads",leads.toString()).apply();}
+  private void updateCount(){
+    if(list==null)return;
+    list.removeAllViews();
+    list.addView(label(leads.length()+" dossier(s) enregistré(s)",13,true));
+    for(int j=leads.length()-1;j>=0;j--){
+      final int idx=j;JSONObject o=leads.optJSONObject(j);if(o==null)continue;
+      LinearLayout card=new LinearLayout(this);card.setOrientation(1);
+      card.setPadding(12,12,12,14);card.setBackgroundColor(Color.WHITE);
+      card.addView(label(o.optString("type")+" • "+o.optString("city"),17,true));
+      card.addView(label(o.optString("status")+
+        (o.optInt("score")>0?"  |  Priorité : "+o.optInt("score")+"/100":""),13,true));
+      String desc=o.optString("detail");
+      card.addView(label(desc.length()>230?desc.substring(0,230)+"…":desc,13,false));
+      if(o.optString("link").startsWith("https://")){
+        String link=o.optString("link");
+        card.addView(button("Voir l'annonce originale",()->{
+          try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(link)));}
+          catch(Exception e){Toast.makeText(this,"Lien impossible à ouvrir",Toast.LENGTH_LONG).show();}
+        }));
+      }
+      card.addView(button("Mettre à jour le dossier",()->edit(idx)));
+      list.addView(card);
+      View space=new View(this);space.setMinimumHeight(14);list.addView(space);
+    }
+  }
+  private void edit(int index){
+    String[] stages={"À vérifier","À qualifier","Contact autorisé","Visite gratuite proposée",
+      "RDV confirmé","Visite effectuée","Devis après visite","Chantier signé","Classé"};
+    new AlertDialog.Builder(this).setTitle("Étape commerciale").setItems(stages,(dialog,selected)->{
+      load();
+      try{leads.getJSONObject(index).put("status",stages[selected]);persist();updateCount();}
+      catch(Exception ignored){}
+    }).setNegativeButton("Annuler",null).show();
   }
 }
