@@ -1,0 +1,73 @@
+package fr.franceclim.pro;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.service.notification.NotificationListenerService;
+import android.service.notification.StatusBarNotification;
+import java.util.Locale;
+
+/**
+ * Opt-in watch of selected app notifications only.
+ * Never scrapes, opens pages, contacts a person, or transmits data to a server.
+ */
+public class RadarNotificationListener extends NotificationListenerService {
+  private static final String CHANNEL="radar_opportunities";
+  @Override public void onNotificationPosted(StatusBarNotification sbn){
+    if(sbn==null||!RadarStore.enabled(this,sbn.getPackageName()))return;
+    Notification original=sbn.getNotification();
+    if(original==null||original.extras==null)return;
+    Bundle e=original.extras;
+    String title=string(e.getCharSequence(Notification.EXTRA_TITLE));
+    String summary=string(e.getCharSequence(Notification.EXTRA_TEXT));
+    String big=string(e.getCharSequence(Notification.EXTRA_BIG_TEXT));
+    CharSequence[] lines=e.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+    StringBuilder text=new StringBuilder(title).append(" ").append(summary).append(" ").append(big);
+    if(lines!=null)for(CharSequence line:lines)text.append(" ").append(string(line));
+    String full=text.toString().trim();
+    if(full.length()<12)return;
+
+    // Never scan Facebook private DMs, contacts, comments or other unrelated notices.
+    if("com.facebook.katana".equals(sbn.getPackageName())){
+      String n=LeadClassifier.normalize(full);
+      if(!(n.contains(" publie dans ")||n.contains(" publication dans ")||n.contains(" posted in ")||
+            n.contains(" dans le groupe ")||n.contains(" group ")||n.contains(" groupe ")))return;
+    }
+    String source="fr.leboncoin".equals(sbn.getPackageName())?"Alerte Leboncoin":"Groupe Facebook";
+    RadarStore.AddResult added=RadarStore.add(this,full,"",source);
+    if(!added.added||added.classification==null)return;
+    // Alerts only for explicit requests in a known location; ambiguous matches stay in the inbox.
+    if(!"PRIORITAIRE".equals(added.classification.status))return;
+    publishAlert(added.classification);
+  }
+  private static String string(CharSequence c){return c==null?"":c.toString();}
+  private void publishAlert(LeadClassifier.Result r){
+    try {
+      if(Build.VERSION.SDK_INT>=33 &&
+         checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=PackageManager.PERMISSION_GRANTED)return;
+      NotificationManager manager=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+      if(manager==null)return;
+      if(Build.VERSION.SDK_INT>=26){
+        NotificationChannel channel=new NotificationChannel(CHANNEL,"Opportunités France Clim",NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription("Demandes explicites de particuliers, zone du 13");
+        manager.createNotificationChannel(channel);
+      }
+      Intent open=new Intent(this,MainActivity.class);
+      open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_SINGLE_TOP);
+      PendingIntent intent=PendingIntent.getActivity(this,500,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+      Notification.Builder builder=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,CHANNEL):new Notification.Builder(this);
+      builder.setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle("France Clim • "+r.type+" • "+r.score+"/100")
+        .setContentText(r.city+" · Demande à examiner")
+        .setStyle(new Notification.BigTextStyle().bigText(r.city+" · "+r.reason))
+        .setAutoCancel(true).setContentIntent(intent)
+        .setPriority(Notification.PRIORITY_HIGH);
+      manager.notify((int)(System.currentTimeMillis()%2000000000L),builder.build());
+    }catch(Exception ignored){ /* The inbox remains available even when alerts are denied. */ }
+  }
+}
