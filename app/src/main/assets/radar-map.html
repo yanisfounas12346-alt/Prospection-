@@ -12,7 +12,7 @@
     #status{padding:9px;background:#f7fafb;font-size:13px;color:#153348;box-sizing:border-box;height:49px;overflow:auto}
     .number {border:2px solid white;border-radius:50%;background:#087c77;color:white;
       font-size:14px;line-height:32px;text-align:center;font-weight:800;box-shadow:0 1px 4px #1237}
-    .leaflet-popup-content{font-family:system-ui,sans-serif;font-size:13px}
+    .leaflet-popup-content{font-family:system-ui,sans-serif;font-size:13px;max-height:55vh;overflow:auto}\n    .opportunity{border-top:1px solid #dce7e8;padding:8px 0}\n    .opportunity a{color:#087c77;font-weight:700}
   </style>
 </head>
 <body>
@@ -34,7 +34,7 @@
   window.renderRadar=function(data){
     markers.clearLayers();
     if(!Array.isArray(data)||data.length===0){
-      status.textContent='Aucune opportunité géolocalisée. Les demandes sans commune précise restent dans la liste.';
+      status.textContent='Aucune opportunité vérifiée sur la carte pour le moment. Appuyez sur Actualiser.';
       return;
     }
     let bounds=[];
@@ -50,7 +50,23 @@
       const br=document.createElement('p');br.textContent=n+' dossier(s) - position approximative, centre de commune.';
       el.appendChild(br);
       const types=document.createElement('p');types.textContent=String(p.types||'');el.appendChild(types);
-      marker.bindPopup(el);bounds.push([lat,lon]);
+      (Array.isArray(p.opportunities)?p.opportunities:[]).forEach(function(o){
+        const item=document.createElement('div');item.className='opportunity';
+        const title=document.createElement('strong');
+        title.textContent=String(o.type||'Demande')+' • Priorité '+String(o.score||0)+'/100';
+        item.appendChild(title);
+        const source=document.createElement('div');source.textContent='Source : '+String(o.source||'');
+        item.appendChild(source);
+        const summary=document.createElement('p');summary.textContent=String(o.summary||'');
+        item.appendChild(summary);
+        if(typeof o.link==='string' && /^https:\/\//.test(o.link)){
+          const a=document.createElement('a');a.href=o.link;a.target='_blank';
+          a.rel='noopener noreferrer';a.textContent='Voir la publication originale';
+          item.appendChild(a);
+        }
+        el.appendChild(item);
+      });
+      marker.bindPopup(el,{maxWidth:320});bounds.push([lat,lon]);
     });
     if(bounds.length)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
     status.textContent=data.length+' commune(s) avec des opportunités. Points au centre des villes, pas aux domiciles.';
