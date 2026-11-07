@@ -1,79 +1,238 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-  <title>France Clim Radar — carte communale</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <style>
-    html,body,#map{height:100%;margin:0}
-    body{font-family:system-ui, sans-serif}
-    #map{height:calc(100% - 49px)}
-    #status{padding:9px;background:#f7fafb;font-size:13px;color:#153348;box-sizing:border-box;height:49px;overflow:auto}
-    .number {border:2px solid white;border-radius:50%;background:#087c77;color:white;
-      font-size:14px;line-height:32px;text-align:center;font-weight:800;box-shadow:0 1px 4px #1237}
-    .leaflet-popup-content{font-family:system-ui,sans-serif;font-size:13px;max-height:55vh;overflow:auto}\n    .opportunity{border-top:1px solid #dce7e8;padding:8px 0}\n    .opportunity a{color:#087c77;font-weight:700}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b283b">
+<title>France Clim Radar 13 — Carte</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+<style>
+:root{color-scheme:light;--navy:#0b283b;--ink:#112f42;--teal:#008f86;--bg:#f8fafb;--border:#dce7eb;--shadow:0 4px 24px rgba(6,31,48,.19)}
+*{box-sizing:border-box}html,body{height:100%;margin:0;font:14px/1.4 system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:#dcebf1}
+button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #eead32;outline-offset:2px}
+#map{position:absolute;inset:0;height:100vh;width:100%;background:#dcebf1}
+.leaflet-container{font:inherit}.leaflet-control-attribution{font-size:10px!important}
+.header{position:absolute;z-index:1100;left:12px;right:12px;top:max(env(safe-area-inset-top),12px);border-radius:18px;padding:12px;background:rgba(255,255,255,.97);box-shadow:var(--shadow);max-width:600px;margin:auto}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+.brand strong{font-size:17px;letter-spacing:.15px;color:var(--navy)}
+.brand small{display:block;color:#577180;font-size:11px;margin-top:2px}
+.counter{background:#e7f7f3;color:#07574e;border-radius:12px;padding:5px 8px;font-weight:800;font-size:12px;white-space:nowrap}
+.searchrow{display:flex;gap:7px}.searchrow input{min-width:0;flex:1;border:1px solid #cddde2;border-radius:11px;background:#f5f9fb;padding:10px 11px;color:var(--ink);outline-offset:1px}
+.smallbutton{border:0;border-radius:10px;background:var(--navy);color:#fff;min-width:41px;padding:9px 10px;font-size:18px}
+.filters{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}
+.filter{border:1px solid #d4e2e6;background:#f7fafb;padding:7px 11px;border-radius:22px;font-weight:700;font-size:12px;white-space:nowrap;color:#355366}
+.filter.active{border-color:#006f68;background:#007d75;color:#fff}
+#notice{position:absolute;z-index:1000;top:167px;left:12px;right:12px;margin:auto;max-width:570px;background:#fff;box-shadow:0 1px 10px #1232;border-radius:12px;padding:8px 12px;color:#2c5362;font-size:12px;pointer-events:none;text-align:center}
+#notice:empty{display:none}
+.mapactions{position:absolute;z-index:1050;right:14px;bottom:55px;display:flex;flex-direction:column;gap:9px}
+.action{border:0;background:white;color:var(--ink);min-width:48px;min-height:48px;padding:0 12px;border-radius:15px;box-shadow:var(--shadow);font-size:19px;font-weight:800}
+.action.primary{background:var(--teal);color:white}
+.action:disabled{opacity:.55}
+.pin{height:42px;min-width:42px;border:3px solid #fff;border-radius:50% 50% 50% 10%;transform:rotate(-45deg);background:#007f78;color:white;box-shadow:0 2px 9px #042e4470;display:flex;align-items:center;justify-content:center}
+.pin b{transform:rotate(45deg);font-size:14px;line-height:1}
+.pin.high{background:#db682e}.pin.heat{background:#3279bb}.pin.water{background:#237e80}
+.pin-dot{background:transparent;border:0}
+#sheet{display:none;position:absolute;z-index:1200;left:9px;right:9px;bottom:34px;margin:auto;max-width:650px;max-height:min(66vh,590px);background:#fff;border-radius:22px;box-shadow:0 8px 40px #001c3890;overflow:hidden}
+#sheet.open{display:flex;flex-direction:column}
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.sheethead strong{font-size:17px;color:var(--navy)}.sheethead p{margin:3px 0 0;font-size:12px;color:#5f7a88}
+.close{width:34px;height:34px;flex:none;border:0;background:#edf4f5;border-radius:10px;color:var(--ink);font-size:22px}
+#items{overflow-y:auto;overscroll-behavior:contain;padding:8px 13px max(env(safe-area-inset-bottom),10px)}
+.item{border:1px solid #e1e9eb;border-radius:13px;padding:12px;margin:8px 0;background:#fbfdfe}
+.itemtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.itemtitle{font-size:14px;font-weight:800;color:#15384a}
+.score{border-radius:20px;padding:4px 8px;white-space:nowrap;background:#e2f1f1;color:#00695e;font-weight:800;font-size:11px}
+.score.high{background:#fff0dc;color:#b2570c}
+.meta{color:#58707f;font-size:12px;margin:5px 0}.summary{margin:8px 0;font-size:13px;white-space:normal;overflow-wrap:anywhere;max-height:6em;overflow:hidden}
+.itemactions{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.itemactions a,.itemactions button{display:inline-flex;align-items:center;padding:8px 12px;border-radius:10px;border:0;background:#e7f3f3;color:#08655f;font-size:12px;font-weight:800;text-decoration:none}
+.itemactions .detail{background:#0c7e79;color:#fff}
+.empty{padding:24px 12px;text-align:center;color:#5c7887}
+#fallback{display:none;position:absolute;inset:0;background:#f1f7f8;z-index:500;padding-top:190px;overflow-y:auto}
+#fallback h3{padding:0 18px}#fallback .item{margin:10px 15px}
+#emptyState{position:absolute;z-index:900;bottom:72px;left:16px;right:16px;max-width:370px;margin:auto;padding:13px 15px;background:#fffffff3;border-radius:14px;box-shadow:var(--shadow);text-align:center;display:none}
+#emptyState b{display:block;font-size:15px}#emptyState span{color:#587080;font-size:12px}
+@media(max-width:370px){.brand strong{font-size:15px}.filter{padding:7px 9px}.header{padding:10px}.counter{font-size:11px}#notice{top:157px}}
+</style>
 </head>
 <body>
-<div id="status">Carte des opportunités à l'échelle des communes du 13. Aucun nom ni numéro transmis à la carte.</div>
-<div id="map"></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<div id="map" aria-label="Carte des opportunités du département 13"></div>
+<div id="fallback" aria-label="Liste des opportunités sans fond cartographique"><h3>Opportunités sans carte</h3><div id="fallbackItems"></div></div>
+<header class="header">
+  <div class="brand"><div><strong>FRANCE CLIM <span style="color:#008f86">RADAR 13</span></strong><small>Opportunités de particuliers • Bouches-du-Rhône</small></div><div class="counter" id="counter">0 piste</div></div>
+  <div class="searchrow"><input id="search" type="search" placeholder="Rechercher une ville ou un besoin…" aria-label="Filtrer les opportunités"><button class="smallbutton" id="fit" title="Recentrer la carte" aria-label="Recentrer la carte">⌖</button></div>
+  <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button><button class="filter" data-filter="high">🔥 Prioritaires</button></div>
+</header>
+<div id="notice" role="status" aria-live="polite">Chargement des opportunités…</div>
+<div id="emptyState"><b>Aucune demande localisée pour l'instant</b><span>Actualisez les sources : seules les opportunités détectées s'affichent.</span></div>
+<div class="mapactions"><button id="list" class="action" title="Voir les opportunités" aria-label="Voir la liste des opportunités">☷</button><button id="refresh" class="action primary" title="Actualiser les opportunités" aria-label="Relancer le radar">↻</button></div>
+<section id="sheet" role="dialog" aria-label="Détails des opportunités" aria-modal="false">
+  <div class="sheethead"><div><strong id="sheetTitle">Opportunités</strong><p id="sheetSub">Publications à vérifier</p></div><button class="close" id="close" aria-label="Fermer les détails">×</button></div>
+  <div id="items"></div>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 <script>
 (function(){
-  const status=document.getElementById('status');
-  if(typeof L==='undefined'){
-    status.textContent="Carte non chargée : connexion internet nécessaire. Consulte la liste des dossiers.";
-    return;
+  'use strict';
+  const $=id=>document.getElementById(id);
+  let pins=[],unlocated=[],mode='all',term='',map=null,markers=null,first=true,focused=null,loading=false;
+  const all=()=>pins.flatMap(p=>Array.isArray(p.opportunities)?p.opportunities:[]).concat(unlocated);
+  const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const matches=o=>{
+    const type=norm(o.type),city=norm(o.city),q=norm(term);
+    if(mode==='clim'&&!type.includes('clim'))return false;
+    if(mode==='eau'&&!(type.includes('eau')||type.includes('cumulus')))return false;
+    if(mode==='high'&&Number(o.score||0)<75)return false;
+    return !q||[type,city,norm(o.source),norm(o.summary)].some(x=>x.includes(q));
+  };
+  const filtered=()=>all().filter(matches);
+  function node(tag,cls,value){
+    const e=document.createElement(tag);
+    if(cls)e.className=cls;
+    if(value!==undefined)e.textContent=String(value);
+    return e;
   }
-  const map=L.map('map',{zoomControl:true}).setView([43.48,5.05],9);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:16,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-  }).addTo(map);
-  let markers=L.layerGroup().addTo(map);
-  window.renderRadar=function(data){
-    markers.clearLayers();
-    if(!Array.isArray(data)||data.length===0){
-      status.textContent='Aucune opportunité vérifiée sur la carte pour le moment. Appuyez sur Actualiser.';
-      return;
-    }
-    let bounds=[];
-    data.forEach(function(p){
-      const lat=Number(p.lat),lon=Number(p.lon);
-      if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
-      const n=Math.max(1,Number(p.count)||1);
-      const dot=L.divIcon({className:'',html:'<div class="number">'+String(n)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
-      const name=String(p.city||'Commune du 13');
-      const marker=L.marker([lat,lon],{icon:dot}).addTo(markers);
-      const el=document.createElement('div');
-      const title=document.createElement('b');title.textContent=name;el.appendChild(title);
-      const br=document.createElement('p');br.textContent=n+' dossier(s) - position approximative, centre de commune.';
-      el.appendChild(br);
-      const types=document.createElement('p');types.textContent=String(p.types||'');el.appendChild(types);
-      (Array.isArray(p.opportunities)?p.opportunities:[]).forEach(function(o){
-        const item=document.createElement('div');item.className='opportunity';
-        const title=document.createElement('strong');
-        title.textContent=String(o.type||'Demande')+' • Priorité '+String(o.score||0)+'/100';
-        item.appendChild(title);
-        const source=document.createElement('div');source.textContent='Source : '+String(o.source||'');
-        item.appendChild(source);
-        const summary=document.createElement('p');summary.textContent=String(o.summary||'');
-        item.appendChild(summary);
-        if(typeof o.link==='string' && /^https:\/\//.test(o.link)){
-          const a=document.createElement('a');a.href=o.link;a.target='_blank';
-          a.rel='noopener noreferrer';a.textContent='Voir la publication originale';
-          item.appendChild(a);
-        }
-        el.appendChild(item);
-      });
-      marker.bindPopup(el,{maxWidth:320});bounds.push([lat,lon]);
+  function itemCard(o){
+    const card=node('article','item');
+    const top=node('div','itemtop');
+    top.appendChild(node('div','itemtitle',(o.type||'Demande')+' · '+(o.city||'Ville à préciser')));
+    const score=Number(o.score)||0;
+    top.appendChild(node('span','score'+(score>=75?' high':''),score+'/100'));
+    card.appendChild(top);
+    const meta=node('div','meta','Source : '+String(o.source||'Non précisée'));
+    card.appendChild(meta);
+    card.appendChild(node('p','summary',String(o.summary||'Demande à vérifier')));
+    const actions=node('div','itemactions');
+    const details=node('button','detail','Consulter la fiche');
+    details.type='button';
+    details.addEventListener('click',function(){
+      if(window.RadarNative&&typeof window.RadarNative.openLead==='function'){
+        window.RadarNative.openLead(Number(o.idx));
+      }
     });
-    if(bounds.length)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
-    status.textContent=data.length+' commune(s) avec des opportunités. Points au centre des villes, pas aux domiciles.';
+    actions.appendChild(details);
+    const url=String(o.link||'');
+    if(/^https:\/\//i.test(url)){
+      const a=node('a','','Voir l’annonce');
+      a.href=url;
+      a.rel='noopener noreferrer';
+      actions.appendChild(a);
+    }
+    card.appendChild(actions);
+    return card;
+  }
+  function showSheet(title,subtitle,entries){
+    $('sheetTitle').textContent=title;
+    $('sheetSub').textContent=subtitle;
+    $('items').replaceChildren();
+    const sorted=entries.slice().sort((a,b)=>Number(b.score||0)-Number(a.score||0));
+    if(!sorted.length)$('items').appendChild(node('p','empty','Aucune opportunité avec ces filtres.'));
+    sorted.forEach(o=>$('items').appendChild(itemCard(o)));
+    $('sheet').classList.add('open');
+  }
+  function hideSheet(){$('sheet').classList.remove('open');focused=null}
+  $('close').addEventListener('click',hideSheet);
+  function cityPin(p){
+    const entries=(p.opportunities||[]).filter(matches);
+    if(!entries.length)return null;
+    const total=entries.length;
+    const high=entries.some(x=>Number(x.score||0)>=75);
+    const typeClim=entries.every(x=>norm(x.type).includes('clim'));
+    const typeEau=entries.every(x=>norm(x.type).includes('eau'));
+    const colour=high?' high':typeClim?' heat':typeEau?' water':'';
+    const icon=L.divIcon({className:'pin-dot',html:'<div class="pin'+colour+'"><b>'+total+'</b></div>',iconSize:[44,44],iconAnchor:[22,40]});
+    const marker=L.marker([p.lat,p.lon],{icon,title:p.city+' : '+total+' opportunité(s)'});
+    marker.on('click',()=>{focused=p.city;showSheet(p.city,total+' dossier(s) · position au centre de la commune',entries)});
+    marker.addTo(markers);
+    return [p.lat,p.lon];
+  }
+  function draw(autoFit){
+    const entries=filtered();
+    $('counter').textContent=entries.length+(entries.length>1?' pistes':' piste');
+    $('list').title='Voir '+entries.length+' opportunités';
+    const geolocated=entries.filter(o=>o.geo!==false).length;
+    $('notice').textContent=loading?'Recherche des sources en cours…':(entries.length?geolocated+' dossier(s) placés · position approximative des communes':'');
+    $('emptyState').style.display=entries.length?'none':'block';
+    if(map&&markers){
+      markers.clearLayers();
+      const bounds=[];
+      pins.forEach(p=>{const ll=cityPin(p);if(ll)bounds.push(ll)});
+      if(autoFit&&bounds.length)map.fitBounds(bounds,{paddingTopLeft:[35,190],paddingBottomRight:[35,65],maxZoom:11,animate:false});
+      else if(autoFit)map.setView([43.48,5.12],9,{animate:false});
+    }else{
+      $('fallbackItems').replaceChildren();
+      if(!entries.length)$('fallbackItems').appendChild(node('div','empty','Aucune opportunité détectée.'));
+      entries.slice().sort((a,b)=>Number(b.score)-Number(a.score)).forEach(o=>$('fallbackItems').appendChild(itemCard(o)));
+    }
+    if($('sheet').classList.contains('open')&&focused){
+      const p=pins.find(x=>x.city===focused);
+      if(p){const matching=p.opportunities.filter(matches);showSheet(p.city,matching.length+' dossier(s) · commune approximative',matching)}
+      else hideSheet();
+    }
+  }
+  window.renderRadar=function(payload){
+    if(Array.isArray(payload))payload={pins:payload,unlocated:[]};
+    pins=Array.isArray(payload&&payload.pins)?payload.pins:[];
+    unlocated=Array.isArray(payload&&payload.unlocated)?payload.unlocated:[];
+    for(const p of pins){
+      if(!Array.isArray(p.opportunities))p.opportunities=[];
+      p.opportunities.forEach(o=>{o.city=p.city;o.geo=true});
+    }
+    unlocated.forEach(o=>{o.geo=false;o.city=o.city||'Non localisée'});
+    loading=false;$('refresh').disabled=false;
+    const missing=unlocated.length;
+    $('notice').textContent=missing?missing+' dossier(s) sans commune précise disponibles dans la liste.':'';
+    draw(first);
+    first=false;
   };
-  window.renderRadarError=function(msg){
-    status.textContent='Carte indisponible : '+String(msg||'connexion nécessaire')+'. Aucun contact personnel n’a été envoyé.';
+  window.renderRadarError=function(message){
+    loading=false;$('refresh').disabled=false;
+    $('notice').textContent=String(message||'Connexion indisponible');
+    draw(false);
   };
+  window.setRadarBusy=function(value){
+    loading=Boolean(value);$('refresh').disabled=loading;draw(false);
+  };
+  window.setRadarStatus=function(message){
+    loading=false;$('refresh').disabled=false;
+    $('notice').textContent=String(message||'');
+  };
+  document.querySelectorAll('[data-filter]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      mode=b.getAttribute('data-filter');
+      document.querySelectorAll('[data-filter]').forEach(e=>e.classList.toggle('active',e===b));
+      hideSheet();draw(true);
+    });
+  });
+  $('search').addEventListener('input',e=>{term=e.target.value.trim();hideSheet();draw(true)});
+  $('fit').addEventListener('click',()=>{hideSheet();draw(true)});
+  $('list').addEventListener('click',()=>{
+    focused=null;
+    showSheet('Toutes les opportunités','Triées par priorité · '+filtered().length+' résultat(s)',filtered());
+  });
+  $('refresh').addEventListener('click',()=>{
+    if(window.RadarNative&&typeof window.RadarNative.refresh==='function'&&!loading){
+      window.RadarNative.refresh();
+      window.setRadarBusy(true);
+    }
+  });
+  try{
+    if(typeof L!=='undefined'){
+      map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([43.48,5.12],9);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+        minZoom:7,maxZoom:17,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributeurs'
+      }).addTo(map);
+      L.control.zoom({position:'bottomleft'}).addTo(map);
+      markers=L.layerGroup().addTo(map);
+      map.on('click',hideSheet);
+    }else{
+      $('map').style.display='none';$('fallback').style.display='block';
+      $('notice').textContent='Fond de carte indisponible : la liste des demandes reste accessible.';
+    }
+  }catch(err){
+    $('map').style.display='none';$('fallback').style.display='block';
+    $('notice').textContent='La carte ne s’affiche pas : consultez les opportunités en liste.';
+  }
+  draw(true);
 })();
 </script>
 </body>
