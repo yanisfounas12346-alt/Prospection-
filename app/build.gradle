@@ -8,7 +8,7 @@ android {
     applicationId 'fr.franceclim.pro.radar'
     minSdk 24
     targetSdk 33
-    versionCode 3
-    versionName '2.1.0-carte-contacts'
+    versionCode 4
+    versionName '2.2.0-sources-publiques'
   }
 }
