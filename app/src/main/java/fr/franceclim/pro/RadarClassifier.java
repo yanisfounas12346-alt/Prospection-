@@ -29,48 +29,15 @@ public final class RadarClassifier {
     for(String t:terms) if(s.contains(normal(t)))return true;
     return false;
   }
+  /** Un seul moteur de qualification pour les flux et les notifications.
+   * Les demandes plausibles restent visibles même lorsque leur intention est incertaine.
+   * Les publications sans localisation dans le 13 sont écartées des flux publics
+   * pour éviter de saturer la carte avec des annonces hors département.
+   */
   public static Result analyse(String text){
-    String s=normal(text);
-    if(s.length()<22) return null;
-    boolean clim=has(s,"climatisation","climatiseur","clim","multi split","monosplit","bi split","gainable","pompe à chaleur air air","pac air air");
-    boolean eau=has(s,"chauffe eau","cumulus","ballon d eau chaude","ballon électrique","plus d eau chaude","ballon thermodynamique");
-    if(!clim&&!eau)return null;
-    // Ventes de matériel et offres de professionnels ne sont pas des demandes.
-    if(has(s,"je vends","à vendre","a vendre","vends mon","vend mon","vente de","occasion",
-       "je propose mes services","nous proposons","artisan qualifié","entreprise spécialisée",
-       "contactez nous","nos prestations","tarif installation","promo installation","recrutons"))return null;
-    if(has(s,"entretien annuel","nettoyage filtre","recharge de gaz","recherche de fuite uniquement"))return null;
-
-    boolean explicit=has(s,"je cherche","je recherche","cherche un","recherche un","besoin d un",
-      "besoin d une","besoin de","quelqu un connait","quelqu un connaitrait","vous connaissez",
-      "devis pour","faire installer","faire poser","faire remplacer","faire changer","qui peut installer",
-      "qui peut remplacer","qui pour installer","trouver un installateur","trouver un plombier",
-      "j aimerais installer","je voudrais installer","je souhaite installer","je veux remplacer");
-    boolean urgent=has(s,"plus d eau chaude","en panne","hs","percé","fuit","fuite","urgence","urgent",
-      "ne fonctionne plus","ne chauffe plus","vient de lâcher","à remplacer rapidement");
-    boolean firstPerson=has(s,"mon chauffe eau","mon cumulus","mon ballon","ma clim","chez moi","ma maison",
-      "mon appartement","notre maison","notre appartement");
-    if(!explicit && !(urgent&&firstPerson))return null;
-    if(has(s,"réparation uniquement","petit dépannage uniquement","entretien uniquement"))return null;
-
-    String city="";
-    String[] cities=COMMUNES.split("\\|");
-    // Trier implicitement par longueur pour éviter "Arles" dans une autre mention.
-    for(String c:cities){
-      String n=normal(c);
-      if(s.contains(n) && c.length()>city.length())city=c;
-    }
-    if(city.isEmpty()) {
-      Matcher postal=Pattern.compile("(?<![0-9])13[0-9]{3}(?![0-9])").matcher(s);
-      if(postal.find())city=postal.group();
-    }
-    if(city.isEmpty() && has(s,"bouches du rhone","département 13","dans le 13"))city="Bouches-du-Rhône";
-    // Sans preuve de localisation dans le 13, aucune alerte automatique.
-    if(city.isEmpty())return null;
-
-    int score=50 + (explicit?17:0) + (urgent?18:0) + (firstPerson?8:0) +
-      (city.equals("Bouches-du-Rhône")?0:7);
-    return new Result(eau?"Chauffe-eau":"Climatisation",city,
-      urgent?"Remplacement / panne urgente":"Demande d'installation ou de remplacement",Math.min(100,score));
+    if(text==null||text.trim().length()<12)return null;
+    LeadClassifier.Result lead=LeadClassifier.classify(text,"");
+    if(!lead.eligible||!lead.geoKnown)return null;
+    return new Result(lead.type,lead.city,lead.reason,lead.score);
   }
 }
