@@ -22,6 +22,7 @@ from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 from .engine import classify
+from .whatsapp import configured as whatsapp_configured, send_template
 
 ROOT = Path(__file__).resolve().parent.parent
 STATE_FILE = ROOT / "data" / "seen-hashes.json"
@@ -124,30 +125,13 @@ def save_state(data):
                           encoding="utf-8")
 
 
-def telegram_send(text):
-    token = os.environ.get("RADAR_TELEGRAM_TOKEN", "")
-    chat_id = os.environ.get("RADAR_TELEGRAM_CHAT_ID", "")
-    if not token or not chat_id:
-        raise RuntimeError("Télégram non configuré")
-    import urllib.parse
-    body = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode()
-    with urlopen(Request(f"https://api.telegram.org/bot{token}/sendMessage",
-                         data=body, method="POST"), timeout=15) as res:
-        if res.status != 200:
-            raise RuntimeError("Notification Telegram refusée")
-
-
 def alert(item, source):
+    """Une notification au propriétaire via un modèle WhatsApp approuvé."""
     result = classify(item["text"])
     if not result or result["score"] < 65:
         return False
-    text = (f"France Clim • Publication à vérifier\n"
-            f"{result['category']} — {result['city']}\n"
-            f"Priorité : {result['score']}/100\n"
-            f"Source : {source}\n"
-            f"{plain(item['text'])[:170]}\n"
-            f"{item.get('link','')}")
-    telegram_send(text[:750])
+    # Par confidentialité, on ne transmet ni nom, ni numéro, ni texte brut.
+    send_template(result["category"], result["city"], result["score"], source)
     return True
 
 
@@ -236,8 +220,8 @@ def main():
     args = parser.parse_args()
     if args.demo:
         return demo()
-    if not os.environ.get("RADAR_TELEGRAM_TOKEN") or not os.environ.get("RADAR_TELEGRAM_CHAT_ID"):
-        print("Alerte non configurée : ajouter RADAR_TELEGRAM_TOKEN et RADAR_TELEGRAM_CHAT_ID dans Secrets.")
+    if not whatsapp_configured():
+        print("WhatsApp non configuré : renseigner les secrets de l'API WhatsApp Business, le numéro destinataire et un modèle approuvé. Aucun message envoyé.")
         return 0
     state = load_state()
     try:
