@@ -35,6 +35,10 @@ jobs:
           javac -encoding UTF-8 -d build/radar-tests app/src/main/java/fr/franceclim/pro/LeadClassifier.java tests/ClassifierSmoke.java
           java -cp build/radar-tests fr.franceclim.pro.ClassifierSmoke
 
+      - name: Tester le rendu et la confidentialite de la carte
+        shell: bash
+        run: python3 scripts/check_android_map.py
+
       - name: Installer les outils Android
         uses: android-actions/setup-android@v4
 
