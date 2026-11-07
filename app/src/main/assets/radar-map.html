@@ -52,7 +52,8 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 #fallback{display:none;position:absolute;inset:0;background:#f1f7f8;z-index:500;padding-top:190px;overflow-y:auto}
 #fallback h3{padding:0 18px}#fallback .item{margin:10px 15px}
 #emptyState{position:absolute;z-index:900;bottom:72px;left:16px;right:16px;max-width:370px;margin:auto;padding:13px 15px;background:#fffffff3;border-radius:14px;box-shadow:var(--shadow);text-align:center;display:none}
-#emptyState b{display:block;font-size:15px}#emptyState span{color:#587080;font-size:12px}
+#emptyState b{display:block;font-size:15px}#emptyState span{color:#587080;font-size:12px;display:block}
+.emptyConnect{margin-top:10px;border:0;background:#007d75;color:#fff;border-radius:12px;padding:10px 17px;font-size:13px;font-weight:800}
 @media(max-width:370px){.brand strong{font-size:15px}.sourcesBtn{padding:6px;font-size:11px}.brandRight{gap:4px}.filter{padding:7px 9px}.header{padding:10px}.counter{font-size:11px}#notice{top:157px}}
 </style>
 </head>
@@ -65,7 +66,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button><button class="filter" data-filter="high">🔥 Prioritaires</button></div>
 </header>
 <div id="notice" role="status" aria-live="polite">Chargement des opportunités…</div>
-<div id="emptyState"><b>Aucune demande localisée pour l'instant</b><span>Actualisez les sources : seules les opportunités détectées s'affichent.</span></div>
+<div id="emptyState"><b>Pas encore d'annonces qualifiées dans le 13</b><span>Connecte AlloVoisins, Leboncoin et les autres plateformes pour recevoir les demandes de particuliers.</span><button type="button" id="startSources" class="emptyConnect">Configurer les sources</button></div>
 <div class="mapactions"><button id="list" class="action" title="Voir les opportunités" aria-label="Voir la liste des opportunités">☷</button><button id="refresh" class="action primary" title="Actualiser les opportunités" aria-label="Relancer le radar">↻</button></div>
 <section id="sheet" role="dialog" aria-label="Détails des opportunités" aria-modal="false">
   <div class="sheethead"><div><strong id="sheetTitle">Opportunités</strong><p id="sheetSub">Publications à vérifier</p></div><button class="close" id="close" aria-label="Fermer les détails">×</button></div>
@@ -210,6 +211,9 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   $('list').addEventListener('click',()=>{
     focused=null;
     showSheet('Toutes les opportunités','Triées par priorité · '+filtered().length+' résultat(s)',filtered());
+  });
+  $('startSources').addEventListener('click',()=>{
+    if(window.RadarNative&&typeof window.RadarNative.sources==='function')window.RadarNative.sources();
   });
   $('sources').addEventListener('click',()=>{
     if(window.RadarNative&&typeof window.RadarNative.sources==='function')window.RadarNative.sources();
