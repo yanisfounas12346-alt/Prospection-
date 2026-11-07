@@ -122,6 +122,39 @@ public final class RadarStore {
     }
   }
 
+  /**
+   * Les coordonnées sont enregistrées uniquement quand elles sont communiquées
+   * à l'artisan. La demande de rappel et sa preuve sont distinctes du numéro.
+   */
+  public static boolean setContact(Context c,int index,String name,String phone,
+    boolean requestedCallback,String evidence){
+    String safeName=name==null?"":name.trim();
+    String safePhone=phone==null?"":phone.trim();
+    String safeEvidence=evidence==null?"":evidence.trim();
+    if(safeName.length()>100||safePhone.length()>35||safeEvidence.length()>600)return false;
+    if(!safePhone.isEmpty()){
+      String digits=safePhone.replaceAll("[^0-9]","");
+      if(digits.length()<9||digits.length()>15||
+          !safePhone.matches("[+0-9 .()/-]+"))return false;
+    }
+    // Une publication publique ne constitue PAS une demande à être rappelé.
+    if(requestedCallback && (safePhone.isEmpty()||safeEvidence.length()<8))return false;
+    synchronized(LOCK){
+      JSONArray leads=leads(c);
+      JSONObject item=leads.optJSONObject(index);
+      if(item==null)return false;
+      try {
+        item.put("personName",safeName);
+        item.put("phone",safePhone);
+        item.put("callbackRequested",requestedCallback);
+        item.put("callbackEvidence",requestedCallback?safeEvidence:"");
+        item.put("callbackAt",requestedCallback?System.currentTimeMillis():0);
+        prefs(c).edit().putString("leads",leads.toString()).apply();
+        return true;
+      }catch(Exception ex){return false;}
+    }
+  }
+
   public static boolean replaceFromBackup(Context c,JSONArray replacement){
     if(replacement==null || replacement.length()>500)return false;
     // Validation basique et limite du volume de données de clients importées.
