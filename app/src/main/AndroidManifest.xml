@@ -5,6 +5,15 @@
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+  <!-- Permet d'afficher uniquement les applis installées avec interface publique, pour que
+       l'utilisateur choisisse volontairement les plateformes de demandes à surveiller. -->
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.MAIN"/>
+      <category android:name="android.intent.category.LAUNCHER"/>
+    </intent>
+  </queries>
+
   <application
     android:label="France Clim Pro Radar"
     android:allowBackup="false"
