@@ -274,9 +274,26 @@ public class MainActivity extends Activity {
   private void updateCount(){
     if(list==null)return;
     list.removeAllViews();
-    list.addView(label(leads.length()+" dossier(s) enregistré(s)",13,true));
-    for(int j=leads.length()-1;j>=0;j--){
-      final int idx=j;JSONObject o=leads.optJSONObject(j);if(o==null)continue;
+    int contactCount=0,priorityCount=0,callbackCount=0;
+    java.util.List<Integer> order=new java.util.ArrayList<>();
+    for(int i=0;i<leads.length();i++){
+      JSONObject p=leads.optJSONObject(i);if(p==null)continue;
+      order.add(i);
+      if(!p.optString("personName").isEmpty()||!p.optString("phone").isEmpty())contactCount++;
+      if(p.optInt("score")>=75)priorityCount++;
+      if(p.optBoolean("callbackRequested",false))callbackCount++;
+    }
+    java.util.Collections.sort(order,(left,right)->{
+      JSONObject a=leads.optJSONObject(left),b=leads.optJSONObject(right);
+      int sa=a==null?0:a.optInt("score"),sb=b==null?0:b.optInt("score");
+      if(sb!=sa)return Integer.compare(sb,sa);
+      long da=a==null?0:a.optLong("date"),db=b==null?0:b.optLong("date");
+      return Long.compare(db,da);
+    });
+    list.addView(label(leads.length()+" dossier(s) • "+priorityCount+" prioritaires • "+
+      contactCount+" avec nom ou téléphone • "+callbackCount+" demandes de rappel documentées",13,true));
+    for(int j=0;j<order.size();j++){
+      final int idx=order.get(j);JSONObject o=leads.optJSONObject(idx);if(o==null)continue;
       LinearLayout card=new LinearLayout(this);card.setOrientation(1);
       card.setPadding(12,12,12,14);card.setBackgroundColor(Color.WHITE);
       card.addView(label(o.optString("type")+" • "+o.optString("city"),17,true));
@@ -307,6 +324,13 @@ public class MainActivity extends Activity {
       }
       card.addView(button("Partager l'alerte sur WhatsApp",()->shareWhatsapp(o)));
       card.addView(button("Mettre à jour le dossier",()->edit(idx)));
+      card.addView(button("Supprimer le dossier et les coordonnées",()->{
+        new AlertDialog.Builder(this).setTitle("Supprimer ce dossier ?")
+          .setMessage("Suppression locale définitive du dossier et de ses coordonnées. Sauvegarde d'abord si nécessaire.")
+          .setPositiveButton("Supprimer",(dialog,which)->{
+            RadarStore.delete(this,idx);load();render();
+          }).setNegativeButton("Annuler",null).show();
+      }));
       list.addView(card);
       View space=new View(this);space.setMinimumHeight(14);list.addView(space);
     }
