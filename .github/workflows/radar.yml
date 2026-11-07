@@ -1,6 +1,13 @@
 name: France Clim Radar - Veille de sources autorisees
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'radar13/**'
+      - 'config/sources.json'
+      - 'fixtures/**'
+      - '.github/workflows/radar.yml'
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
