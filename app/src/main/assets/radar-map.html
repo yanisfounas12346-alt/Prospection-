@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>France Clim Radar — carte communale</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    html,body,#map{height:100%;margin:0}
+    body{font-family:system-ui, sans-serif}
+    #map{height:calc(100% - 49px)}
+    #status{padding:9px;background:#f7fafb;font-size:13px;color:#153348;box-sizing:border-box;height:49px;overflow:auto}
+    .number {border:2px solid white;border-radius:50%;background:#087c77;color:white;
+      font-size:14px;line-height:32px;text-align:center;font-weight:800;box-shadow:0 1px 4px #1237}
+    .leaflet-popup-content{font-family:system-ui,sans-serif;font-size:13px}
+  </style>
+</head>
+<body>
+<div id="status">Carte des opportunités à l'échelle des communes du 13. Aucun nom ni numéro transmis à la carte.</div>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  const status=document.getElementById('status');
+  if(typeof L==='undefined'){
+    status.textContent="Carte non chargée : connexion internet nécessaire. Consulte la liste des dossiers.";
+    return;
+  }
+  const map=L.map('map',{zoomControl:true}).setView([43.48,5.05],9);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:16,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+  let markers=L.layerGroup().addTo(map);
+  window.renderRadar=function(data){
+    markers.clearLayers();
+    if(!Array.isArray(data)||data.length===0){
+      status.textContent='Aucune opportunité géolocalisée. Les demandes sans commune précise restent dans la liste.';
+      return;
+    }
+    let bounds=[];
+    data.forEach(function(p){
+      const lat=Number(p.lat),lon=Number(p.lon);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+      const n=Math.max(1,Number(p.count)||1);
+      const dot=L.divIcon({className:'',html:'<div class="number">'+String(n)+'</div>',iconSize:[36,36],iconAnchor:[18,18]});
+      const name=String(p.city||'Commune du 13');
+      const marker=L.marker([lat,lon],{icon:dot}).addTo(markers);
+      const el=document.createElement('div');
+      const title=document.createElement('b');title.textContent=name;el.appendChild(title);
+      const br=document.createElement('p');br.textContent=n+' dossier(s) - position approximative, centre de commune.';
+      el.appendChild(br);
+      const types=document.createElement('p');types.textContent=String(p.types||'');el.appendChild(types);
+      marker.bindPopup(el);bounds.push([lat,lon]);
+    });
+    if(bounds.length)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
+    status.textContent=data.length+' commune(s) avec des opportunités. Points au centre des villes, pas aux domiciles.';
+  };
+  window.renderRadarError=function(msg){
+    status.textContent='Carte indisponible : '+String(msg||'connexion nécessaire')+'. Aucun contact personnel n’a été envoyé.';
+  };
+})();
+</script>
+</body>
+</html>
