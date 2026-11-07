@@ -18,7 +18,8 @@ import org.json.JSONObject;
 /** Tableau de bord du radar et CRM France Clim pour les particuliers. */
 public class MainActivity extends Activity {
   private LinearLayout root, list;
-  private EditText city, detail, contact;
+  private EditText city, detail, contact, personName, personPhone, callbackEvidence;
+  private CheckBox callbackRequested;
   private Spinner type;
   private SharedPreferences prefs;
   private JSONArray leads=new JSONArray();
@@ -71,6 +72,8 @@ public class MainActivity extends Activity {
     root.setBackgroundColor(Color.rgb(246,249,252));scroll.addView(root);setContentView(scroll);
     root.addView(label("FRANCE CLIM PRO • RADAR 13",23,true));
     root.addView(label("Demandes de particuliers • Climatisation • Chauffe-eau",14,false));
+    root.addView(button("🗺 Carte des opportunités dans le 13",()->
+      startActivity(new Intent(this,MapActivity.class))));
     root.addView(label("RADAR AUTOMATIQUE",19,true));
     root.addView(label("ALERTES LEBONCOIN / FACEBOOK (avec autorisation)",16,true));
     root.addView(label(notificationAccess()
@@ -105,7 +108,17 @@ public class MainActivity extends Activity {
     city=input("Ville du département 13");root.addView(city);
     contact=input("Contact / référence (facultatif)");root.addView(contact);
     detail=input("Texte de la demande ou lien partagé");detail.setMinLines(2);root.addView(detail);
+    root.addView(label("COORDONNÉES COMMUNIQUÉES PAR LE PARTICULIER",14,true));
+    personName=input("Nom / prénom (si la personne l'a communiqué)");root.addView(personName);
+    personPhone=input("Téléphone communiqué (facultatif)");root.addView(personPhone);
+    callbackRequested=new CheckBox(this);
+    callbackRequested.setText("La personne a explicitement demandé à être rappelée");
+    root.addView(callbackRequested);
+    callbackEvidence=input("Preuve de la demande de rappel : formulaire, date, référence...");
+    root.addView(callbackEvidence);
+    root.addView(label("Un numéro publié sur Internet n'autorise pas un appel commercial. En rénovation énergétique, une réponse à une demande explicite de rappel est strictement encadrée.",12,false));
     root.addView(button("Analyser et ajouter la demande",this::saveManual));
+    root.addView(button("Importer un CSV de formulaires reçus",this::chooseCsv));
     root.addView(label("OPPORTUNITÉS À EXAMINER",19,true));
     list=new LinearLayout(this);list.setOrientation(1);root.addView(list);
     updateCount();
@@ -171,6 +184,12 @@ public class MainActivity extends Activity {
     }
     RadarStore.AddResult result=RadarStore.add(this,d,c,"Partage / saisie");
     if(result.added){
+      int idx=RadarStore.leads(this).length()-1;
+      if(!RadarStore.setContact(this,idx,personName.getText().toString(),
+         personPhone.getText().toString(),callbackRequested.isChecked(),
+         callbackEvidence.getText().toString())){
+        Toast.makeText(this,"Dossier ajouté, mais coordonnées invalides ou preuve de rappel absente.",Toast.LENGTH_LONG).show();
+      }
       load();render();
       Toast.makeText(this,"Opportunité enregistrée pour vérification",Toast.LENGTH_LONG).show();
       return;
@@ -201,7 +220,11 @@ public class MainActivity extends Activity {
       o.put("contact",contact.getText().toString().trim());
       o.put("status","À qualifier");o.put("date",System.currentTimeMillis());o.put("score",0);
       o.put("link","");o.put("automatic",false);leads.put(o);
-      persist();render();
+      persist();
+      RadarStore.setContact(this,leads.length()-1,personName.getText().toString(),
+         personPhone.getText().toString(),callbackRequested.isChecked(),
+         callbackEvidence.getText().toString());
+      render();
     }catch(Exception e){Toast.makeText(this,"Échec d'enregistrement",Toast.LENGTH_LONG).show();}
   }
   private void persist(){prefs.edit().putString("leads",leads.toString()).apply();}
@@ -218,6 +241,20 @@ public class MainActivity extends Activity {
         (o.optInt("score")>0?"  |  Priorité : "+o.optInt("score")+"/100":""),13,true));
       String desc=o.optString("detail");
       card.addView(label(desc.length()>230?desc.substring(0,230)+"…":desc,13,false));
+      String name=o.optString("personName",""),phone=o.optString("phone","");
+      if(!name.isEmpty())card.addView(label("Nom communiqué : "+name,13,true));
+      if(!phone.isEmpty())card.addView(label("Téléphone communiqué : "+phone,13,false));
+      if(o.optBoolean("callbackRequested",false) && !phone.isEmpty()){
+        String number=phone;
+        card.addView(button("Appel en réponse à sa demande (vérifier le délai)",()->
+          dialCallback(number)));
+      }else if(!phone.isEmpty()){
+        card.addView(label("Pas de preuve de rappel : ne pas appeler à des fins commerciales.",12,false));
+      }
+      card.addView(button("Renseigner le nom / téléphone",()->editContact(idx)));
+      String appt=o.optString("appointment_at","");
+      if(!appt.isEmpty())card.addView(label("Visite gratuite : "+appt,13,true));
+      card.addView(button("Planifier une visite gratuite",()->scheduleVisit(idx)));
       if(o.optString("link").startsWith("https://")){
         String link=o.optString("link");
         card.addView(button("Voir l'annonce originale",()->{
@@ -269,13 +306,90 @@ public class MainActivity extends Activity {
     }
   }
 
+  private void dialCallback(String phone) {
+    new AlertDialog.Builder(this).setTitle("Vérifier le droit de rappeler")
+      .setMessage("Ne rappeler que si la personne a demandé explicitement ce rappel pour ce chantier, dans les délais légaux (notamment 5 jours ouvrables pour certaines demandes liées à la rénovation énergétique). Ne pas utiliser cette fiche pour un démarchage.")
+      .setPositiveButton("Ouvrir le composeur",(dialog,which)->{
+        try{startActivity(new Intent(Intent.ACTION_DIAL,Uri.fromParts("tel",phone,null)));}
+        catch(Exception e){Toast.makeText(this,"Impossible d'ouvrir le téléphone",Toast.LENGTH_LONG).show();}
+      }).setNegativeButton("Annuler",null).show();
+  }
+
+  private void editContact(int index){
+    JSONArray arr=RadarStore.leads(this);
+    JSONObject item=arr.optJSONObject(index);
+    if(item==null)return;
+    LinearLayout fields=new LinearLayout(this);
+    fields.setOrientation(LinearLayout.VERTICAL);
+    fields.setPadding(24,8,24,8);
+    EditText name=input("Nom / prénom communiqué");
+    name.setText(item.optString("personName",""));
+    fields.addView(name);
+    EditText tel=input("Numéro communiqué");
+    tel.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+    tel.setText(item.optString("phone",""));
+    fields.addView(tel);
+    CheckBox callback=new CheckBox(this);
+    callback.setText("Demande explicite de rappel reçue");
+    callback.setChecked(item.optBoolean("callbackRequested",false));
+    fields.addView(callback);
+    EditText proof=input("Preuve / date / canal de la demande explicite");
+    proof.setText(item.optString("callbackEvidence",""));
+    fields.addView(proof);
+    new AlertDialog.Builder(this).setTitle("Coordonnées communiquées")
+      .setMessage("Ne saisir que les informations reçues volontairement dans le cadre de la demande.")
+      .setView(fields).setPositiveButton("Enregistrer",(dialog,which)->{
+        boolean ok=RadarStore.setContact(this,index,name.getText().toString(),
+          tel.getText().toString(),callback.isChecked(),proof.getText().toString());
+        if(!ok)Toast.makeText(this,"Coordonnées invalides ou preuve de demande de rappel manquante.",Toast.LENGTH_LONG).show();
+        load();render();
+      }).setNegativeButton("Annuler",null).show();
+  }
+
+  private void scheduleVisit(int index){
+    EditText appointment=input("Date et heure de visite (ex. 2026-11-12 14:30)");
+    new AlertDialog.Builder(this).setTitle("Visite technique gratuite")
+      .setMessage("Visite sur place, gratuite et sans engagement, avant devis.")
+      .setView(appointment).setPositiveButton("Confirmer",(dialog,which)->{
+        if(!RadarStore.setVisit(this,index,appointment.getText().toString()))
+          Toast.makeText(this,"Indiquer une date et une heure.",Toast.LENGTH_LONG).show();
+        load();render();
+      }).setNegativeButton("Annuler",null).show();
+  }
+
+  private static final int PICK_CSV=6401;
+  private void chooseCsv(){
+    Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+    i.addCategory(Intent.CATEGORY_OPENABLE);
+    i.setType("*/*");
+    i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"text/csv","text/comma-separated-values","text/plain",
+      "application/vnd.ms-excel"});
+    startActivityForResult(i,PICK_CSV);
+  }
+  @Override protected void onActivityResult(int request,int result,Intent data){
+    super.onActivityResult(request,result,data);
+    if(request!=PICK_CSV||result!=RESULT_OK||data==null||data.getData()==null)return;
+    Uri uri=data.getData();
+    new Thread(()->{
+      try(java.io.InputStream stream=getContentResolver().openInputStream(uri)){
+        CsvIntake.Report r=CsvIntake.importFile(this,stream);
+        runOnUiThread(()->{load();render();
+          new AlertDialog.Builder(this).setTitle("Import CSV de demandes directes")
+            .setMessage(r.toString()).setPositiveButton("OK",null).show();
+        });
+      }catch(Exception ex){
+        runOnUiThread(()->Toast.makeText(this,"Import impossible : vérifier le CSV.",Toast.LENGTH_LONG).show());
+      }
+    },"radar-import-csv").start();
+  }
+
   private void edit(int index){
     String[] stages={"À vérifier","À qualifier","Contact autorisé","Visite gratuite proposée",
       "RDV confirmé","Visite effectuée","Devis après visite","Chantier signé","Classé"};
     new AlertDialog.Builder(this).setTitle("Étape commerciale").setItems(stages,(dialog,selected)->{
-      load();
-      try{leads.getJSONObject(index).put("status",stages[selected]);persist();updateCount();}
-      catch(Exception ignored){}
+      boolean ok=RadarStore.updateStage(this,index,stages[selected]);
+      if(!ok)Toast.makeText(this,"Visite technique obligatoire avant le devis ou la signature.",Toast.LENGTH_LONG).show();
+      load();render();
     }).setNegativeButton("Annuler",null).show();
   }
 }
