@@ -23,7 +23,10 @@ public final class BlueskyScanner {
   private static final String ENDPOINT =
       "https://api.bsky.app/xrpc/app.bsky.feed.searchPosts";
   private static final String[] QUERIES = {
-    "climatisation", "chauffe-eau", "cumulus", "climatiseur"
+    "climatisation", "chauffe-eau", "cumulus", "climatiseur",
+    "clim Marseille", "chauffe eau Marseille", "clim Aix", "cumulus Aix",
+    "clim Vitrolles", "chauffe eau Aubagne", "installateur clim 13",
+    "plombier chauffe eau 13"
   };
 
   public static final class Report {
@@ -60,8 +63,9 @@ public final class BlueskyScanner {
           String text=record.optString("text","").trim();
           if(text.length()<20||text.length()>1800)continue;
           LeadClassifier.Result qualified=LeadClassifier.classify(text,"");
-          if(!qualified.eligible||!qualified.geoKnown||
-             !"PRIORITAIRE".equals(qualified.status))continue;
+          // Conserver aussi les demandes locales incertaines : un particulier
+          // peut exprimer son besoin sans employer les formules habituelles.
+          if(!qualified.eligible||!qualified.geoKnown)continue;
           report.candidates++;
           String handle=author.optString("handle","");
           String uri=post.optString("uri","");
@@ -73,7 +77,8 @@ public final class BlueskyScanner {
           RadarStore.AddResult added=RadarStore.add(app,text+" "+link,"","Bluesky (publication publique)");
           if(added.added){
             report.added++;
-            if(initialized && added.classification!=null){
+            if(initialized && added.classification!=null &&
+               "PRIORITAIRE".equals(added.classification.status)){
               JSONObject alert=new JSONObject();
               alert.put("type",added.classification.type);
               alert.put("city",added.classification.city);
