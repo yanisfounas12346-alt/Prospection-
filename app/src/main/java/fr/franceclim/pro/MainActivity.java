@@ -104,6 +104,25 @@ public class MainActivity extends Activity {
       prefs.edit().putBoolean("watch_fb",checked).apply());
     root.addView(fb);
     root.addView(label("L'autorisation d'accès aux notifications est large. Le code ne traite que les applications activées ci-dessus ; désactive-la dans les paramètres Android à tout moment.",12,false));
+    root.addView(label("SOURCES PUBLIQUES SANS COMPTE",16,true));
+    Switch bluesky=new Switch(this);
+    bluesky.setText("Bluesky : rechercher les demandes publiques (API officielle)");
+    bluesky.setChecked(prefs.getBoolean("watch_bluesky",true));
+    bluesky.setOnCheckedChangeListener((v,checked)->{
+      prefs.edit().putBoolean("watch_bluesky",checked).apply();
+      RadarJobService.schedule(this);
+    });
+    root.addView(bluesky);
+    root.addView(label(prefs.getString("bluesky_scan_status","Bluesky : pas encore vérifié"),12,false));
+    Switch mastodon=new Switch(this);
+    mastodon.setText("Mastodon : hashtags publics climatisation / chauffe-eau");
+    mastodon.setChecked(prefs.getBoolean("watch_mastodon",true));
+    mastodon.setOnCheckedChangeListener((v,checked)->{
+      prefs.edit().putBoolean("watch_mastodon",checked).apply();
+      RadarJobService.schedule(this);
+    });
+    root.addView(mastodon);
+    root.addView(label("Ces flux peuvent ne contenir aucune demande dans le 13 ou être indisponibles ; aucun prospect fictif n'est créé.",12,false));
     root.addView(label("FLUX RSS/ATOM (autres sources autorisées)",16,true));
     String sources=prefs.getString("feeds","").trim();
     root.addView(label(sources.isEmpty()?
@@ -140,6 +159,8 @@ public class MainActivity extends Activity {
   }
   private void sourceHub(){
     String[] options={
+      "Bluesky (API publique sans compte)",
+      "Mastodon (hashtags RSS publics)",
       "Alertes Google (RSS ou e-mail)",
       "Leboncoin (recherches sauvegardées / alertes officielles)",
       "Facebook (notifications de groupes avec accord)",
@@ -152,13 +173,15 @@ public class MainActivity extends Activity {
       .setMessage("Sélectionne une source. Un site qui ne fournit pas de flux ou d'API autorisée ne peut pas être raccordé automatiquement.")
       .setItems(options,(dialog,which)->{
         switch(which){
-          case 0:openPublicUrl("https://www.google.com/alerts");break;
-          case 1:openPublicUrl("https://www.leboncoin.fr/");break;
-          case 2:openPublicUrl("https://www.facebook.com/groups/");break;
-          case 3:sourceDialog();break;
-          case 4:chooseCsv();break;
-          case 5:
-          case 6:openPublicUrl("https://github.com/yanisfounas12346-alt/Prospection-/blob/main/docs/MISE_EN_SERVICE_RADAR.md");break;
+          case 0:openPublicUrl("https://bsky.app/search?q=climatisation");break;
+          case 1:openPublicUrl("https://mastodon.social/tags/climatisation");break;
+          case 2:openPublicUrl("https://www.google.com/alerts");break;
+          case 3:openPublicUrl("https://www.leboncoin.fr/");break;
+          case 4:openPublicUrl("https://www.facebook.com/groups/");break;
+          case 5:sourceDialog();break;
+          case 6:chooseCsv();break;
+          case 7:
+          case 8:openPublicUrl("https://github.com/yanisfounas12346-alt/Prospection-/blob/main/docs/MISE_EN_SERVICE_RADAR.md");break;
         }
       }).setNegativeButton("Fermer",null).show();
   }
@@ -208,14 +231,19 @@ public class MainActivity extends Activity {
       .setNegativeButton("Annuler",null).show();
   }
   private void scanNow(){
-    if(prefs.getString("feeds","").trim().isEmpty()){
-      Toast.makeText(this,"Ajoute d'abord une source RSS.",Toast.LENGTH_LONG).show();return;
+    if(prefs.getString("feeds","").trim().isEmpty() &&
+      !prefs.getBoolean("watch_mastodon",true)&&
+      !prefs.getBoolean("watch_bluesky",true)){
+      Toast.makeText(this,"Active une source pour commencer le radar.",Toast.LENGTH_LONG).show();return;
     }
-    Toast.makeText(this,"Analyse en cours…",Toast.LENGTH_SHORT).show();
+    Toast.makeText(this,"Scan des sources publiques en cours…",Toast.LENGTH_SHORT).show();
     new Thread(()->{
-      RadarScanner.Report report=RadarScanner.scan(getApplicationContext());
+      RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
+      BlueskyScanner.Report bsky=BlueskyScanner.scan(getApplicationContext());
       runOnUiThread(()->{load();render();new AlertDialog.Builder(this).setTitle("Radar : résultat")
-        .setMessage(report.toString()).setPositiveButton("OK",null).show();});
+        .setMessage(rss.toString()+"\\n"+bsky.toString()+
+          "\\nLes résultats sont des pistes à vérifier, pas des contacts autorisés.")
+        .setPositiveButton("OK",null).show();});
     },"radar-scan-manuel").start();
   }
   private void saveManual(){
