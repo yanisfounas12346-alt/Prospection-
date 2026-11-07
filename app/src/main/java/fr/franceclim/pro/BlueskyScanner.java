@@ -39,6 +39,7 @@ public final class BlueskyScanner {
     Report report=new Report();
     SharedPreferences prefs=app.getSharedPreferences("franceclim",Context.MODE_PRIVATE);
     if(!prefs.getBoolean("watch_bluesky",true))return report;
+    boolean initialized=prefs.getBoolean("bluesky_initialized",false);
     // Déduplication par URL dans RadarStore; aucune information de compte n'est transférée.
     for(String query:QUERIES){
       report.searches++;
@@ -70,13 +71,23 @@ public final class BlueskyScanner {
           String link="https://bsky.app/profile/"+handle+"/post/"+rkey;
           if(!batch.add(link))continue;
           RadarStore.AddResult added=RadarStore.add(app,text+" "+link,"","Bluesky (publication publique)");
-          if(added.added)report.added++;
+          if(added.added){
+            report.added++;
+            if(initialized && added.classification!=null){
+              JSONObject alert=new JSONObject();
+              alert.put("type",added.classification.type);
+              alert.put("city",added.classification.city);
+              alert.put("score",added.classification.score);
+              RadarScanner.notifyLead(app,alert);
+            }
+          }
         }
       }catch(Exception e){
         report.errors++;
       }
     }
-    prefs.edit().putString("bluesky_scan_status",report.toString()+
+    prefs.edit().putBoolean("bluesky_initialized",true)
+      .putString("bluesky_scan_status",report.toString()+
       " • "+new java.util.Date().toString()).apply();
     return report;
   }
