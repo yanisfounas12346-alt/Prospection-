@@ -46,8 +46,6 @@ public final class RadarScanner {
       prefs.edit().putString("scan_status","Aucune source RSS configurée").apply();
       return report;
     }
-    JSONArray leads;
-    try {leads=new JSONArray(prefs.getString("leads","[]"));} catch(Exception e){leads=new JSONArray();}
     Set<String> seen=new LinkedHashSet<>(prefs.getStringSet("seen",Collections.<String>emptySet()));
     boolean first=prefs.getBoolean("radar_initialized",false);
     int attempted=0;
@@ -79,7 +77,7 @@ public final class RadarScanner {
             } else if("guid".equalsIgnoreCase(tag)||"id".equalsIgnoreCase(tag))entry.id=p.nextText();
           } else if(event==XmlPullParser.END_TAG && ("item".equalsIgnoreCase(tag)||"entry".equalsIgnoreCase(tag))){
             report.checked++;
-            if(count++<100) handle(ctx,prefs,seen,leads,entry,feed,first,report);
+            if(count++<100) handle(ctx,seen,entry,first,report);
             entry=null;
           }
         }
@@ -94,14 +92,14 @@ public final class RadarScanner {
       for(String h:seen)if(skip-->0){}else reduced.add(h);
       seen=reduced;
     }
-    prefs.edit().putString("leads",leads.toString()).putStringSet("seen",new LinkedHashSet<>(seen))
+    prefs.edit().putStringSet("seen",new LinkedHashSet<>(seen))
       .putBoolean("radar_initialized",true)
       .putString("scan_status",report.toString()+" • "+new java.util.Date().toString()).apply();
     return report;
   }
 
-  private static void handle(Context ctx,SharedPreferences prefs,Set<String> seen,JSONArray leads,
-    Entry entry,String feed,boolean first,Report report) {
+  private static void handle(Context ctx,Set<String> seen,Entry entry,
+    boolean initialized,Report report) {
     String content=clean(entry.title+" "+entry.description);
     RadarClassifier.Result result=RadarClassifier.analyse(content);
     if(result==null)return;
@@ -109,16 +107,22 @@ public final class RadarScanner {
     if(key.equals(sha("")))key=sha(content);
     if(seen.contains(key))return;
     seen.add(key);
-    try {
-      JSONObject lead=new JSONObject();
-      lead.put("type",result.category);lead.put("city",result.city);
-      lead.put("detail",content.length()>600?content.substring(0,600):content);
-      lead.put("status","À vérifier");lead.put("score",result.score);
-      lead.put("source",feed);lead.put("link",entry.link);lead.put("contact","");
-      lead.put("date",System.currentTimeMillis());lead.put("automatic",true);
-      leads.put(lead);report.added++;
-      if(first)notifyLead(ctx,lead);
-    }catch(Exception ignored){}
+    // Toutes les sources (notifications, partage, RSS) alimentent le même CRM
+    // synchronisé, pour éviter d'écraser les dossiers détectés en parallèle.
+    String body=content+(entry.link.isEmpty()?"":" "+entry.link);
+    RadarStore.AddResult added=RadarStore.add(ctx,body,"","Flux RSS/Atom");
+    if(!added.added)return;
+    report.added++;
+    if(initialized && added.classification!=null &&
+      "PRIORITAIRE".equals(added.classification.status)) {
+      try {
+        JSONObject lead=new JSONObject();
+        lead.put("type",added.classification.type);
+        lead.put("city",added.classification.city);
+        lead.put("score",added.classification.score);
+        notifyLead(ctx,lead);
+      }catch(Exception ignored){}
+    }
   }
 
   private static String clean(String text){
