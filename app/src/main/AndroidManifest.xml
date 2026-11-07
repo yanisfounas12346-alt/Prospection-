@@ -1,10 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <uses-permission android:name="android.permission.INTERNET"/>
-  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-  <application android:label="France Clim Pro Radar" android:theme="@android:style/Theme.Material.Light.NoActionBar"
-      android:usesCleartextTraffic="false" android:allowBackup="false">
+  <application
+    android:label="France Clim Pro Radar"
+    android:allowBackup="false"
+    android:usesCleartextTraffic="false"
+    android:theme="@android:style/Theme.Material.Light.NoActionBar">
     <activity android:name=".MainActivity" android:exported="true">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
@@ -16,7 +17,14 @@
         <data android:mimeType="text/plain"/>
       </intent-filter>
     </activity>
-    <service android:name=".RadarJobService" android:permission="android.permission.BIND_JOB_SERVICE"
-        android:exported="false"/>
+    <service
+      android:name=".RadarNotificationListener"
+      android:label="France Clim Radar : veille des alertes"
+      android:exported="false"
+      android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+      <intent-filter>
+        <action android:name="android.service.notification.NotificationListenerService"/>
+      </intent-filter>
+    </service>
   </application>
 </manifest>
