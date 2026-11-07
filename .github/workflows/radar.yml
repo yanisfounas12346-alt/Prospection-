@@ -1,0 +1,50 @@
+name: France Clim Radar - Veille de sources autorisees
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: france-clim-radar
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Tester le moteur de qualification
+        run: python -m unittest discover -s radar13 -p 'test_*.py' -v
+      - name: Tester le flux fictif sans reseau
+        run: python -m radar13.run --demo
+      - name: Scanner les alertes autorisees
+        env:
+          RADAR_RSS_FEEDS: ${{ secrets.RADAR_RSS_FEEDS }}
+          RADAR_TELEGRAM_TOKEN: ${{ secrets.RADAR_TELEGRAM_TOKEN }}
+          RADAR_TELEGRAM_CHAT_ID: ${{ secrets.RADAR_TELEGRAM_CHAT_ID }}
+          RADAR_IMAP_HOST: ${{ secrets.RADAR_IMAP_HOST }}
+          RADAR_IMAP_USER: ${{ secrets.RADAR_IMAP_USER }}
+          RADAR_IMAP_PASSWORD: ${{ secrets.RADAR_IMAP_PASSWORD }}
+          RADAR_IMAP_FOLDER: ${{ vars.RADAR_IMAP_FOLDER }}
+        run: python -m radar13.run
+      - name: Sauvegarder empreintes anti-doublons sans contenu personnel
+        run: |
+          git config user.name "france-clim-radar-bot"
+          git config user.email "radar@users.noreply.github.com"
+          git add data/seen-hashes.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(radar): maj empreintes de veille [skip ci]"
+            git push
+          fi
