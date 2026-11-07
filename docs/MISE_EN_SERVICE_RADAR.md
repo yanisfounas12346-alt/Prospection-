@@ -32,15 +32,31 @@ Deux **demandes fictives** doivent apparaître (ballon à Marseille, clim à Mar
 
 Le dépôt contient `radar13` et le workflow `.github/workflows/radar.yml` qui demande une exécution toutes les 15 minutes. GitHub Actions peut retarder ou sauter des exécutions. La surveillance est inactive tant que les sources et le canal d'alerte ne sont pas configurés.
 
-### Notifications privées Telegram
+### Notifications WhatsApp pour l'artisan (et non les prospects)
 
-1. Créer un bot personnel avec **BotFather** sur Telegram, puis récupérer son jeton.
-2. Trouver son `chat_id` après avoir lancé une conversation avec ce bot.
-3. Dans **GitHub → Settings → Secrets and variables → Actions**, ajouter :
-   - `RADAR_TELEGRAM_TOKEN` (secret) ;
-   - `RADAR_TELEGRAM_CHAT_ID` (secret).
+**Sans compte WhatsApp Business Platform configuré, il n'existe pas d'envoi WhatsApp automatique.** L'APK fournit tout de même un bouton **Partager l'alerte sur WhatsApp** : il ouvre l'application WhatsApp ou WhatsApp Business avec le message préparé. L'utilisateur choisit le destinataire et confirme l'envoi.
 
-**Ne jamais mettre un token dans le code public ni dans le chat.**
+Pour envoyer automatiquement une notification à l'artisan avec le **WhatsApp Business Cloud API officiel de Meta** :
+
+1. Configurer un compte WhatsApp Business Platform, l'application Meta, le numéro émetteur et les permissions de messagerie nécessaires. Il faut le consentement du destinataire qui recevra les alertes internes.
+2. Dans **WhatsApp Manager**, faire approuver un **modèle de notification** appelé, par exemple, `france_clim_radar_alerte`, avec exactement ces 4 variables dans le corps :
+
+   > France Clim Radar : nouvelle demande à examiner. Activité : {{1}}. Commune : {{2}}. Score : {{3}}/100. Source : {{4}}.
+
+   Meta examine et classe le modèle selon ses propres règles ; son approbation et sa catégorie tarifaire ne sont pas garanties. L'envoi peut être facturé. Il n'est pas possible d'envoyer librement un message hors fenêtre de service de 24 heures sans modèle approuvé.
+3. Dans **GitHub → Settings → Secrets and variables → Actions**, définir ces **secrets** :
+   - `RADAR_WHATSAPP_ACCESS_TOKEN` : jeton d'accès Meta (jamais dans le code).
+   - `RADAR_WHATSAPP_PHONE_NUMBER_ID` : identifiant du numéro émetteur Cloud API, **pas** le numéro de téléphone.
+   - `RADAR_WHATSAPP_RECIPIENT` : numéro WhatsApp de l'artisan consentant au format international, par exemple `336XXXXXXXX` (exemple non réel).
+4. Définir les **variables** GitHub Actions :
+   - `RADAR_WHATSAPP_TEMPLATE_NAME` : nom exact du modèle approuvé, par exemple `france_clim_radar_alerte`.
+   - `RADAR_WHATSAPP_TEMPLATE_LANG` : code de langue approuvé, généralement `fr`.
+   - `RADAR_WHATSAPP_GRAPH_VERSION` : facultatif, par défaut `v26.0`.
+5. Relancer **Actions → France Clim Radar - Veille de sources autorisees** une fois les sources configurées.
+
+**Confidentialité :** les alertes automatiques au professionnel contiennent seulement activité, commune, score heuristique et nom de source. Aucun nom, téléphone ni texte intégral d'annonce n'est envoyé sur WhatsApp par le moteur Python. Il n'envoie **aucun message aux auteurs des annonces**.
+
+Documentation officielle : https://www.postman.com/meta/whatsapp-business-platform/request/o65u5m5/send-message-template-text et https://whatsappbusiness.com/policy/.
 
 ### Configurer des flux RSS/Atom
 
@@ -61,7 +77,7 @@ Le moteur lit les **messages non lus du dossier désigné**, analyse la demande,
 
 ### Confidentialité
 
-Le dépôt public ne stocke que des empreintes SHA-256 dans `data/seen-hashes.json` pour limiter les doublons. Les e-mails, noms, numéros de téléphone et textes de prospects n'y sont **pas** enregistrés. La notification Telegram masque les numéros et adresses e-mail courants, mais une vérification de confidentialité reste nécessaire avant usage professionnel.
+Le dépôt public ne stocke que des empreintes SHA-256 dans `data/seen-hashes.json` pour limiter les doublons. Les e-mails, noms, numéros de téléphone et textes de prospects n'y sont **pas** enregistrés. La notification WhatsApp automatique ne contient que des métadonnées (activité, ville, score, source), sans coordonnées client ni texte d'annonce.
 
 ## 4. Vérifier le moteur
 
