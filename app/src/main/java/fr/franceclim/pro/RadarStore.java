@@ -189,10 +189,17 @@ public final class RadarStore {
   public static void clear(Context c){
     synchronized(LOCK){prefs(c).edit().remove("leads").remove("last_match").apply();}
   }
+  /** Notifications d'applications de demandes de travaux choisies explicitement. */
   public static boolean enabled(Context c,String pkg){
     if("fr.leboncoin".equals(pkg))return prefs(c).getBoolean("watch_lbc",true);
     if("com.facebook.katana".equals(pkg))return prefs(c).getBoolean("watch_fb",false);
-    return false;
+    if(pkg==null || pkg.isEmpty())return false;
+    // Les messageries personnelles, e-mails et applications système sont exclues.
+    if(pkg.equals("com.whatsapp")||pkg.equals("com.whatsapp.w4b")||
+       pkg.startsWith("com.google.android.gm")||pkg.contains("messaging")||
+       pkg.contains("telegram")||pkg.contains("signal"))return false;
+    return prefs(c).getStringSet("watched_marketplace_packages",
+      java.util.Collections.<String>emptySet()).contains(pkg);
   }
   public static void setEnabled(Context c,String name,boolean value) {
     prefs(c).edit().putBoolean(name,value).apply();
