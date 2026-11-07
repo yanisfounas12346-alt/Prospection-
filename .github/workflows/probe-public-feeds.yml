@@ -1,0 +1,21 @@
+name: Diagnostic de flux publics France Clim
+on:
+  push:
+    branches: [main]
+    paths: ['scripts/probe_public_feeds.py', '.github/workflows/probe-public-feeds.yml']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verifier Bluesky et Mastodon sans identification
+        run: python scripts/probe_public_feeds.py
