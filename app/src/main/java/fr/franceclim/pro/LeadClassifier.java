@@ -63,9 +63,9 @@ public final class LeadClassifier {
   public static Result classify(String text,String cityHint) {
     String norm=normalize((text==null?"":text)+" "+(cityHint==null?"":cityHint));
     boolean clim=any(norm,"clim","climatisation","climatiseur","clim réversible","clim reversible",
-      "split","monosplit","multisplit","multi split","gainable","pac air air","pompe a chaleur air air");
+      "split","monosplit","multisplit","multi split","bi split","gainable","pac air air","pompe a chaleur air air","air conditionne","clim qui fuit");
     boolean eau=any(norm,"chauffe eau","chauffe-eau","cumulus","ballon d eau chaude",
-      "ballon eau chaude","ballon electrique","eau chaude","ballon thermodynamique");
+      "ballon eau chaude","ballon electrique","eau chaude","ballon thermodynamique","ballon ecs","chauffe bain");
     if(!clim&&!eau) return new Result("AUTRE","Zone à vérifier","HORS_SUJET",
       "Aucun besoin lié à la climatisation ou au chauffe-eau détecté",0,false,false,false);
 
@@ -97,15 +97,19 @@ public final class LeadClassifier {
     boolean geo=city!=null;
     if(city==null)city="Zone à vérifier";
 
-    boolean request=any(norm,"je cherche","nous cherchons","recherche un","recherche une",
+    boolean request=any(norm,"je cherche","nous cherchons","recherche un","recherche une","je recherche","on recherche","vous connaissez",
       "qui connait","quelqu un pour","quelqu'un pour","besoin de","besoin d",
       "cherche artisan","cherche plombier","cherche installateur","faire installer","faire poser",
       "demande de devis","souhaite installer","souhaiterais installer","pouvez vous installer",
-      "qui peut venir","urgent plombier","je voudrais installer","j aimerais installer");
+      "qui peut venir","qui pourrait venir","qui peut me conseiller","connaissez vous un",
+      "quelqu un connait","quelqu un connaitrait","quelqu un pour","qui pour","urgent plombier",
+      "je voudrais installer","j aimerais installer","je veux remplacer","je souhaite remplacer",
+      "je dois remplacer","devis pour","besoin d un artisan","a qui faire appel",
+      "recommandation d installateur","recommandation plombier");
     boolean specific=any(norm,"installation","installer","remplacer","remplacement",
-      "changer","pose de","pose d","poser","monter","devis","technicien","artisan","plombier","installateur");
+      "changer","pose de","pose d","poser","monter","devis","technicien","artisan","plombier","installateur","remise en service","remettre en marche");
     boolean emergency=any(norm,"plus d eau chaude","panne","hs","perce","fuite",
-      "urgent","au plus vite","en urgence","ne fonctionne plus");
+      "urgent","au plus vite","en urgence","ne fonctionne plus","ne chauffe plus","vient de lacher","en panne","plus de clim");
     boolean repairOnly=any(norm,"entretien annuel","recharge de gaz","nettoyage filtre",
       "nettoyage des filtres","je vends un","pieces detachees","reparation seulement",
       "recherche piece","recherche une piece");
