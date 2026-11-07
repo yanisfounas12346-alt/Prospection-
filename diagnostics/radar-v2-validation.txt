@@ -1,0 +1,1 @@
+Validation du radar Android V2 via pull request, sans modification du code applicatif.
