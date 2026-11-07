@@ -38,7 +38,29 @@ public class RadarNotificationListener extends NotificationListenerService {
       if(!(n.contains(" publie dans ")||n.contains(" publication dans ")||n.contains(" posted in ")||
             n.contains(" dans le groupe ")||n.contains(" group ")||n.contains(" groupe ")))return;
     }
-    String source="fr.leboncoin".equals(sbn.getPackageName())?"Alerte Leboncoin":"Groupe Facebook";
+    String pkg=sbn.getPackageName();
+    if(!"fr.leboncoin".equals(pkg)&&!"com.facebook.katana".equals(pkg)){
+      // Les demandes publiques ou avis de nouvelles annonces uniquement ; jamais les
+      // notifications de conversation privée, paiement, messagerie ou compte.
+      String n=LeadClassifier.normalize(title+" "+summary+" "+big);
+      if(!(n.contains(" demande ")||n.contains(" recherche ")||
+           n.contains(" annonce ")||n.contains(" chantier ")||
+           n.contains(" un voisin ")||n.contains(" besoin ")))return;
+      if(n.contains(" message prive ")||n.contains(" votre conversation ")||
+         n.contains(" paiement ")||n.contains(" connexion a votre compte "))return;
+    }
+    String source;
+    if("fr.leboncoin".equals(pkg))source="Alerte Leboncoin";
+    else if("com.facebook.katana".equals(pkg))source="Publication de groupe Facebook";
+    else {
+      String appLabel="Plateforme travaux";
+      try{
+        CharSequence label=getPackageManager().getApplicationLabel(
+          getPackageManager().getApplicationInfo(pkg,0));
+        if(label!=null)appLabel=label.toString();
+      }catch(Exception ignored){}
+      source="Alerte "+appLabel.substring(0,Math.min(65,appLabel.length()));
+    }
     RadarStore.AddResult added=RadarStore.add(this,full,"",source);
     // Journal de diagnostic minimal : aucun texte, contact ou nom de personne.
     android.content.SharedPreferences prefs=getSharedPreferences("franceclim",MODE_PRIVATE);
