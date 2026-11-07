@@ -36,7 +36,8 @@ public class MapActivity extends Activity {
     LinearLayout frame=new LinearLayout(this);
     frame.setOrientation(LinearLayout.VERTICAL);
     info=new TextView(this);
-    info.setText("Carte communale : recherche des centres des villes...");
+    info.setText("FRANCE CLIM RADAR 13 • Carte des opportunités");
+    RadarJobService.schedule(this);
     info.setPadding(14,12,14,12);
     frame.addView(info);
     map=new WebView(this);
@@ -52,14 +53,28 @@ public class MapActivity extends Activity {
       }
     });
     frame.addView(map,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
-    Button open=new Button(this);
-    open.setText("Ouvrir OpenStreetMap dans le navigateur");
-    open.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
-      Uri.parse("https://www.openstreetmap.org/#map=9/43.48/5.05"))));
-    frame.addView(open);
+    Button refresh=new Button(this);
+    refresh.setText("🔎 Actualiser les opportunités");
+    refresh.setOnClickListener(v->scanAndRefresh(refresh));
+    frame.addView(refresh);
     setContentView(frame);
     map.loadUrl("file:///android_asset/radar-map.html");
     new Thread(()->calculatePins(),"radar-communes").start();
+  }
+
+  private void scanAndRefresh(Button button){
+    button.setEnabled(false);
+    info.setText("Recherche des opportunités publiques en cours…");
+    new Thread(()->{
+      RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
+      BlueskyScanner.Report bsky=BlueskyScanner.scan(getApplicationContext());
+      runOnUiThread(()->{
+        button.setEnabled(true);
+        info.setText("Sources analysées • "+rss.added+" RSS et "+bsky.added+
+          " Bluesky ajoutée(s). Mise à jour de la carte…");
+        new Thread(()->calculatePins(),"radar-refresh-map").start();
+      });
+    },"radar-scan-map").start();
   }
 
   @Override protected void onDestroy(){
@@ -93,6 +108,7 @@ public class MapActivity extends Activity {
       }
       JSONArray leads=RadarStore.leads(this);
       LinkedHashMap<String,int[]> groups=new LinkedHashMap<>();
+      LinkedHashMap<String,JSONArray> opportunities=new LinkedHashMap<>();
       int noCity=0;
       for(int i=0;i<leads.length();i++){
         JSONObject lead=leads.optJSONObject(i);if(lead==null||lead.optBoolean("demo",false))continue;
@@ -103,6 +119,17 @@ public class MapActivity extends Activity {
         if(!centres.containsKey(key)){noCity++;continue;}
         int[] count=groups.get(key);
         if(count==null){count=new int[3];groups.put(key,count);}
+        JSONArray entries=opportunities.get(key);
+        if(entries==null){entries=new JSONArray();opportunities.put(key,entries);}
+        JSONObject preview=new JSONObject();
+        preview.put("type",lead.optString("type","Demande"));
+        preview.put("score",lead.optInt("score",0));
+        preview.put("source",lead.optString("source",""));
+        preview.put("summary",lead.optString("detail","").substring(0,
+          Math.min(180,lead.optString("detail","").length())));
+        String link=lead.optString("link","");
+        if(link.startsWith("https://"))preview.put("link",link);
+        entries.put(preview);
         count[0]++;
         String type=lead.optString("type","").toLowerCase(java.util.Locale.ROOT);
         if(type.contains("clim"))count[1]++;
@@ -115,14 +142,15 @@ public class MapActivity extends Activity {
         JSONObject pin=new JSONObject();
         pin.put("city",e.getKey());pin.put("lat",ll[0]);pin.put("lon",ll[1]);
         pin.put("count",e.getValue()[0]);
+        pin.put("opportunities",opportunities.get(e.getKey()));
         pin.put("types",e.getValue()[1]+" clim • "+e.getValue()[2]+" chauffe-eau");
         data.put(pin);
       }
       final int excluded=noCity;
       runOnUiThread(()->{
         pending=data;
-        info.setText(data.length()+" ville(s) sur la carte ; "+excluded+
-          " dossier(s) sans commune identifiable. Position approximative.");
+        info.setText(data.length()+" commune(s) avec opportunités • "+excluded+
+          " dossier(s) non localisés. Touchez une épingle pour les détails.");
         updatePage();
       });
     }catch(Exception ex){
