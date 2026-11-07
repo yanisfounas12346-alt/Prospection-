@@ -9,7 +9,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android:
@@ -86,6 +86,24 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publier une APK beta directement telechargeable
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk FranceClimRadar13-beta.apk
+          if gh release view radar-v2-beta --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload radar-v2-beta FranceClimRadar13-beta.apk --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create radar-v2-beta FranceClimRadar13-beta.apk \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "France Clim Radar 13 - Beta Android" \
+              --prerelease \
+              --notes "Version de test, non validee sur telephone physique. Surveillance des notifications autorisees et de flux RSS/Atom autorises. Aucun demarchage automatique. Si la signature change, desinstaller l'ancienne beta avant la nouvelle."
+          fi
 
       - name: Conserver journal si echec
         if: failure()
