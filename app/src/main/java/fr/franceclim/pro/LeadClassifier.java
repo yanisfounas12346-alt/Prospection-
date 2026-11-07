@@ -103,7 +103,7 @@ public final class LeadClassifier {
       "demande de devis","souhaite installer","souhaiterais installer","pouvez vous installer",
       "qui peut venir","urgent plombier","je voudrais installer","j aimerais installer");
     boolean specific=any(norm,"installation","installer","remplacer","remplacement",
-      "changer","pose de","pose d","monter","devis","technicien","artisan","plombier");
+      "changer","pose de","pose d","poser","monter","devis","technicien","artisan","plombier","installateur");
     boolean emergency=any(norm,"plus d eau chaude","panne","hs","perce","fuite",
       "urgent","au plus vite","en urgence","ne fonctionne plus");
     boolean repairOnly=any(norm,"entretien annuel","recharge de gaz","nettoyage filtre",
