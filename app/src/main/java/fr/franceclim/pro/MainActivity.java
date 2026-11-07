@@ -37,7 +37,7 @@ public class MainActivity extends Activity {
   @Override protected void onNewIntent(Intent intent){
     super.onNewIntent(intent);setIntent(intent);consumeShare(intent);
   }
-  @Override protected void onResume(){super.onResume();if(prefs!=null){load();if(root!=null)updateCount();}}
+  @Override protected void onResume(){super.onResume();if(prefs!=null){load();if(root!=null)render();}}
   private void consumeShare(Intent intent){
     if(Intent.ACTION_SEND.equals(intent.getAction()) && "text/plain".equals(intent.getType())){
       String content=intent.getStringExtra(Intent.EXTRA_TEXT);
@@ -72,9 +72,28 @@ public class MainActivity extends Activity {
     root.addView(label("FRANCE CLIM PRO • RADAR 13",23,true));
     root.addView(label("Demandes de particuliers • Climatisation • Chauffe-eau",14,false));
     root.addView(label("RADAR AUTOMATIQUE",19,true));
+    root.addView(label("ALERTES LEBONCOIN / FACEBOOK (avec autorisation)",16,true));
+    root.addView(label(notificationAccess()
+      ? "Accès aux notifications actif. Les alertes de recherche sauvegardées peuvent être analysées."
+      : "Accès non activé : aucune alerte Leboncoin/Facebook ne sera lue.",13,false));
+    root.addView(button("Activer ou vérifier l'accès aux notifications",this::openNotificationSettings));
+    Switch lbc=new Switch(this);
+    lbc.setText("Surveiller les alertes Leboncoin");
+    lbc.setChecked(prefs.getBoolean("watch_lbc",true));
+    lbc.setOnCheckedChangeListener((control,checked)->
+      prefs.edit().putBoolean("watch_lbc",checked).apply());
+    root.addView(lbc);
+    Switch fb=new Switch(this);
+    fb.setText("Surveiller les notifications de groupes Facebook (facultatif)");
+    fb.setChecked(prefs.getBoolean("watch_fb",false));
+    fb.setOnCheckedChangeListener((control,checked)->
+      prefs.edit().putBoolean("watch_fb",checked).apply());
+    root.addView(fb);
+    root.addView(label("L'autorisation d'accès aux notifications est large. Le code ne traite que les applications activées ci-dessus ; désactive-la dans les paramètres Android à tout moment.",12,false));
+    root.addView(label("FLUX RSS/ATOM (autres sources autorisées)",16,true));
     String sources=prefs.getString("feeds","").trim();
     root.addView(label(sources.isEmpty()?
-      "⚠️ Aucune source RSS configurée : le radar ne peut encore rien détecter.":
+      "Aucun flux RSS configuré. Les alertes officielles restent utilisables si leur accès est activé.":
       "Sources configurées : "+countSources(sources)+" • Vérification périodique demandée (~15 min, variable selon Android)",13,false));
     root.addView(button("Configurer les sources d'annonces RSS",this::sourceDialog));
     root.addView(button("🔎 Scanner les sources maintenant",this::scanNow));
@@ -86,11 +105,27 @@ public class MainActivity extends Activity {
     city=input("Ville du département 13");root.addView(city);
     contact=input("Contact / référence (facultatif)");root.addView(contact);
     detail=input("Texte de la demande ou lien partagé");detail.setMinLines(2);root.addView(detail);
-    root.addView(button("Enregistrer le dossier",this::saveManual));
+    root.addView(button("Analyser et ajouter la demande",this::saveManual));
     root.addView(label("OPPORTUNITÉS À EXAMINER",19,true));
     list=new LinearLayout(this);list.setOrientation(1);root.addView(list);
     updateCount();
     root.addView(label("Les publications détectées ne constituent pas une autorisation de démarchage. Contact uniquement dans un cadre permis et sur demande explicite.",12,false));
+  }
+  private boolean notificationAccess(){
+    try {
+      String value=android.provider.Settings.Secure.getString(
+        getContentResolver(),"enabled_notification_listeners");
+      return value!=null && value.contains(getPackageName()+"/");
+    }catch(Exception e){return false;}
+  }
+  private void openNotificationSettings(){
+    new AlertDialog.Builder(this)
+      .setTitle("Autorisation Android")
+      .setMessage("Android donnera à France Clim Pro l'accès aux notifications affichées sur le téléphone. L'application ne retient que les alertes pertinentes des applications sélectionnées. N'active cet accès que si tu acceptes cette permission large.")
+      .setPositiveButton("Ouvrir les paramètres",(dialog,which)->{
+        try {startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));}
+        catch(Exception e){Toast.makeText(this,"Paramètres indisponibles",Toast.LENGTH_LONG).show();}
+      }).setNegativeButton("Annuler",null).show();
   }
   private int countSources(String value){
     int count=0;for(String s:value.split("\\r?\\n"))if(s.trim().startsWith("https://"))count++;return count;
@@ -128,15 +163,30 @@ public class MainActivity extends Activity {
     },"radar-scan-manuel").start();
   }
   private void saveManual(){
-    String c=city.getText().toString().trim(),d=detail.getText().toString().trim();
-    if(c.isEmpty()||d.isEmpty()){
-      Toast.makeText(this,"Ville et description nécessaires.",Toast.LENGTH_SHORT).show();return;
+    String c=city.getText().toString().trim();
+    String d=detail.getText().toString().trim();
+    if(d.isEmpty()){
+      Toast.makeText(this,"Ajoute le texte d'une demande.",Toast.LENGTH_SHORT).show();
+      return;
     }
-    String n=RadarClassifier.normal(d);
-    if(n.contains(" je vends ")||n.contains(" a vendre ")||n.contains(" vente de ")){
-      new AlertDialog.Builder(this).setMessage("Annonce de vente de matériel probable. Enregistrer quand même ?")
-        .setPositiveButton("Oui",(x,y)->store(c,d)).setNegativeButton("Non",null).show();
-    }else store(c,d);
+    RadarStore.AddResult result=RadarStore.add(this,d,c,"Partage / saisie");
+    if(result.added){
+      load();render();
+      Toast.makeText(this,"Opportunité enregistrée pour vérification",Toast.LENGTH_LONG).show();
+      return;
+    }
+    if(result.classification!=null && result.classification.eligible){
+      Toast.makeText(this,result.reason,Toast.LENGTH_LONG).show();
+      return;
+    }
+    if(c.isEmpty()){
+      Toast.makeText(this,"Ville à confirmer avant la sauvegarde manuelle.",Toast.LENGTH_LONG).show();
+      return;
+    }
+    new AlertDialog.Builder(this).setTitle("Demande non confirmée")
+      .setMessage("Le texte ne ressemble pas clairement à une demande de particulier. L'enregistrer quand même comme dossier à vérifier ?")
+      .setPositiveButton("Enregistrer",(dialog,which)->store(c,d))
+      .setNegativeButton("Annuler",null).show();
   }
   private void store(String c,String d){
     load();
