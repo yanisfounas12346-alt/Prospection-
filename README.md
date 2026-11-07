@@ -1,4 +1,18 @@
-# France Clim Pro Radar 2.0 — particuliers (13)
+# France Clim Pro Radar 2.1 — carte, sources, coordonnées communiquées
+
+**Nouveauté 2.1 :** carte interactive des opportunités par commune du 13, fiches avec **nom et téléphone lorsqu'ils ont été communiqués**, import CSV de demandes reçues directement, dates de visite, sauvegarde et suppression locales. Partage manuel vers WhatsApp. Aucun numéro caché ni nom privé n'est récupéré.
+
+➡️ [Sources et carte : guide pratique](docs/SOURCES_CARTE_CONTACTS.md)
+
+➡️ [Configurer le radar et WhatsApp Business](docs/MISE_EN_SERVICE_RADAR.md)
+
+## Avant de télécharger
+
+Installer la **dernière APK verte** (GitHub Actions ou la version bêta GitHub Releases). Si Android refuse de mettre à jour une ancienne bêta, **sauvegarder d'abord ses dossiers en JSON**, puis désinstaller l'ancienne application ; des APK de test signées avec des clés de debug différentes ne peuvent pas forcément se mettre à jour en place.
+
+**Attention :** le projet ne contient pas encore de compte autorisé donnant accès à toutes les annonces de particuliers ; il faut configurer les notifications, flux RSS et formulaires réels. **Les numéros ne sont pas garantis** et ne doivent servir qu'à répondre à une demande explicite dans un cadre légal.
+
+## Historique de la version initiale
 
 Application Android native pour ne pas manquer les **demandes de particuliers** concernant :
 - pose ou remplacement de **climatisation** (monosplit, multisplit, gainable) ;
