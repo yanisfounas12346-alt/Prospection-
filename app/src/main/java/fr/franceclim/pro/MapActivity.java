@@ -4,6 +4,12 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.provider.Settings;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.CheckBox;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
@@ -23,6 +29,11 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Carte principale. Toutes les fiches contacts restent locales dans RadarStore.
@@ -134,6 +145,173 @@ public class MapActivity extends Activity {
   private final class MapBridge {
     @JavascriptInterface public void refresh(){runOnUiThread(()->startScan());}
     @JavascriptInterface public void openLead(int index){runOnUiThread(()->showLead(index));}
+    @JavascriptInterface public void sources(){runOnUiThread(()->showSources());}
+  }
+
+  /** Les réglages sont secondaires : la carte demeure l'écran principal. */
+  private void showSources(){
+    String[] choices={
+      "Activer l'accès aux alertes Android",
+      "Choisir les applications de travaux à surveiller",
+      "Importer les demandes reçues (CSV avec contacts)",
+      "Ajouter des flux RSS/Atom autorisés",
+      "Diagnostic des sources actives",
+      "AlloVoisins — ouvrir le site",
+      "Leboncoin — créer les recherches sauvegardées",
+      "Travaux.com — espace professionnels",
+      "NeedHelp — consulter les missions"
+    };
+    new AlertDialog.Builder(this).setTitle("Sources des opportunités")
+      .setMessage("Le radar écoute les sources publiques et les applications que tu autorises. Les coordonnées privées ne sont pas extraites des profils.")
+      .setItems(choices,(dlg,selection)->{
+        switch(selection){
+          case 0:requestNotificationAccess();break;
+          case 1:chooseMarketplaces();break;
+          case 2:chooseCsv();break;
+          case 3:editFeeds();break;
+          case 4:showSourcesStatus();break;
+          case 5:openExternal(Uri.parse("https://www.allovoisins.com/"));break;
+          case 6:openExternal(Uri.parse("https://www.leboncoin.fr/"));break;
+          case 7:openExternal(Uri.parse("https://www.travaux.com/"));break;
+          case 8:openExternal(Uri.parse("https://www.needhelp.com/"));break;
+        }
+      }).setNegativeButton("Fermer",null).show();
+  }
+
+  private boolean notificationAccess(){
+    String value=Settings.Secure.getString(getContentResolver(),
+      "enabled_notification_listeners");
+    return value!=null && value.contains(getPackageName()+"/");
+  }
+  private void requestNotificationAccess(){
+    new AlertDialog.Builder(this).setTitle("Permission Android")
+      .setMessage("Android accorde un accès large aux notifications. Le radar ne traite que les applications de travaux sélectionnées. Les conversations WhatsApp, e-mails et messageries personnelles sont exclues.")
+      .setPositiveButton("Ouvrir les paramètres",(dlg,w)->{
+        try{startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));}
+        catch(Exception ex){Toast.makeText(this,"Paramètres indisponibles",Toast.LENGTH_LONG).show();}
+      }).setNegativeButton("Annuler",null).show();
+  }
+
+  /** Liste issue des applications effectivement installées, pas d'identifiants inventés. */
+  private void chooseMarketplaces(){
+    LinkedHashMap<String,String> apps=new LinkedHashMap<>();
+    PackageManager pm=getPackageManager();
+    Intent launcher=new Intent(Intent.ACTION_MAIN);
+    launcher.addCategory(Intent.CATEGORY_LAUNCHER);
+    for(ResolveInfo info:pm.queryIntentActivities(launcher,0)){
+      if(info.activityInfo==null)continue;
+      String pkg=info.activityInfo.packageName;
+      CharSequence title=info.loadLabel(pm);
+      if(title==null)continue;
+      String label=title.toString();
+      String n=LeadClassifier.normalize(label);
+      if(n.contains("allovoisins")||n.contains("allo voisins")||
+         n.contains("travaux com")||n.contains("needhelp")||
+         n.contains("frizbiz")||n.contains("mesdepanneurs")||
+         n.contains("need help")||n.contains("bricoleur")||
+         n.contains("starofservice"))apps.put(pkg,label);
+    }
+    ArrayList<String> ids=new ArrayList<>();ArrayList<String> names=new ArrayList<>();
+    ids.add("fr.leboncoin");names.add("Leboncoin — alertes officielles");
+    ids.add("com.facebook.katana");names.add("Facebook — notifications de groupes");
+    for(Map.Entry<String,String> app:apps.entrySet()){
+      if(ids.contains(app.getKey()))continue;
+      ids.add(app.getKey());names.add(app.getValue()+" — demandes de travaux");
+    }
+    boolean[] checked=new boolean[ids.size()];
+    Set<String> selected=prefs.getStringSet("watched_marketplace_packages",
+      Collections.<String>emptySet());
+    for(int i=0;i<ids.size();i++){
+      String id=ids.get(i);
+      if("fr.leboncoin".equals(id))checked[i]=prefs.getBoolean("watch_lbc",true);
+      else if("com.facebook.katana".equals(id))checked[i]=prefs.getBoolean("watch_fb",false);
+      else checked[i]=selected.contains(id);
+    }
+    new AlertDialog.Builder(this).setTitle("Applications de demandes")
+      .setMessage("Sélectionne uniquement les plateformes professionnelles ou les alertes de groupes que tu souhaites surveiller. Il faut avoir installé ces applications et activé leurs notifications.")
+      .setMultiChoiceItems(names.toArray(new String[0]),checked,(d,index,on)->checked[index]=on)
+      .setPositiveButton("Enregistrer",(d,w)->{
+        Set<String> picked=new LinkedHashSet<>();
+        for(int i=0;i<ids.size();i++){
+          if("fr.leboncoin".equals(ids.get(i)))prefs.edit().putBoolean("watch_lbc",checked[i]).apply();
+          else if("com.facebook.katana".equals(ids.get(i)))prefs.edit().putBoolean("watch_fb",checked[i]).apply();
+          else if(checked[i])picked.add(ids.get(i));
+        }
+        prefs.edit().putStringSet("watched_marketplace_packages",picked).apply();
+        if(!notificationAccess())requestNotificationAccess();
+        else Toast.makeText(this,"Sources enregistrées : veille des nouvelles alertes active.",
+          Toast.LENGTH_LONG).show();
+      }).setNegativeButton("Annuler",null).show();
+  }
+
+  private void editFeeds(){
+    EditText input=new EditText(this);input.setMinLines(3);
+    input.setHint("https://site-autorisant-les-flux.example/feed.rss");
+    input.setText(prefs.getString("feeds",""));
+    new AlertDialog.Builder(this).setTitle("Flux RSS ou Atom publics")
+      .setMessage("Une URL HTTPS par ligne. Utiliser uniquement des flux officiels ou autorisés. Les deux flux Mastodon sont déjà intégrés.")
+      .setView(input).setPositiveButton("Enregistrer",(d,w)->{
+        String value=input.getText().toString().trim();
+        for(String line:value.split("\\r?\\n")){
+          if(!line.trim().isEmpty()&&!line.trim().startsWith("https://")){
+            Toast.makeText(this,"Chaque flux doit commencer par https://",Toast.LENGTH_LONG).show();
+            return;
+          }
+        }
+        prefs.edit().putString("feeds",value).apply();
+        RadarJobService.schedule(this);
+        Toast.makeText(this,"Flux enregistrés.",Toast.LENGTH_SHORT).show();
+      }).setNegativeButton("Annuler",null).show();
+  }
+
+  private void showSourcesStatus(){
+    int checked=prefs.getInt("notification_checked",0);
+    String result=prefs.getString("notification_last_result","Aucune alerte encore examinée");
+    String source=prefs.getString("notification_last_source","—");
+    Set<String> platforms=prefs.getStringSet("watched_marketplace_packages",
+      Collections.<String>emptySet());
+    String status="Permission de notifications : "+(notificationAccess()?"ACTIVE":"NON ACTIVÉE")
+      +"\\nLeboncoin : "+(prefs.getBoolean("watch_lbc",true)?"choisi":"désactivé")
+      +"\\nFacebook : "+(prefs.getBoolean("watch_fb",false)?"choisi":"désactivé")
+      +"\\nAutres plateformes installées : "+platforms.size()
+      +"\\nBluesky : "+(prefs.getBoolean("watch_bluesky",true)?"actif":"désactivé")
+      +"\\nMastodon : "+(prefs.getBoolean("watch_mastodon",true)?"actif":"désactivé")
+      +"\\nNotifications examinées : "+checked
+      +"\\nDernière source : "+source
+      +"\\nDernier résultat : "+result
+      +"\\nFlux RSS : "+prefs.getString("scan_status","Jamais analysés")
+      +"\\nBluesky : "+prefs.getString("bluesky_scan_status","Jamais analysé");
+    new AlertDialog.Builder(this).setTitle("Diagnostic du radar")
+      .setMessage(status)
+      .setPositiveButton("OK",null).show();
+  }
+
+  private static final int PICK_CSV=7403;
+  private void chooseCsv(){
+    Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+    i.addCategory(Intent.CATEGORY_OPENABLE);
+    i.setType("*/*");
+    i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"text/csv",
+      "text/comma-separated-values","text/plain","application/vnd.ms-excel"});
+    startActivityForResult(i,PICK_CSV);
+  }
+  @Override protected void onActivityResult(int request,int result,Intent data){
+    super.onActivityResult(request,result,data);
+    if(request!=PICK_CSV||result!=RESULT_OK||data==null||data.getData()==null)return;
+    Uri uri=data.getData();
+    new Thread(()->{
+      String report;
+      try(InputStream input=getContentResolver().openInputStream(uri)){
+        CsvIntake.Report imported=CsvIntake.importFile(this,input);
+        report=imported.toString();
+      }catch(Exception ex){report="Import impossible : fichier CSV invalide.";}
+      final String text=report;
+      runOnUiThread(()->{
+        recalculate();
+        new AlertDialog.Builder(this).setTitle("Demandes directes importées")
+          .setMessage(text).setPositiveButton("OK",null).show();
+      });
+    },"radar-import-formulaires").start();
   }
 
   /** Fiche native privée : les coordonnées ne quittent jamais le stockage local.
