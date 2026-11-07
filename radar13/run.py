@@ -184,7 +184,7 @@ def alert_mailbox():
     host = os.environ.get("RADAR_IMAP_HOST", "")
     user = os.environ.get("RADAR_IMAP_USER", "")
     password = os.environ.get("RADAR_IMAP_PASSWORD", "")
-    folder = os.environ.get("RADAR_IMAP_FOLDER", "FranceClimRadar")
+    folder = os.environ.get("RADAR_IMAP_FOLDER") or "FranceClimRadar"
     if not (host and user and password):
         return 0
     result = 0
