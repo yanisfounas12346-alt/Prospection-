@@ -27,7 +27,7 @@ def template_payload(category, city, score, source, environ=None):
     if not re.fullmatch(r"[a-z0-9_]{3,512}", template):
         raise ValueError("Nom de modèle WhatsApp invalide")
     values = (category, city, str(score), source)
-    clean = [re.sub(r"\\s+", " ", str(item)).strip()[:80] or "Non précisé" for item in values]
+    clean = [re.sub(r"\s+", " ", str(item)).strip()[:80] or "Non précisé" for item in values]
     return {
         "messaging_product": "whatsapp", "to": recipient, "type": "template",
         "template": {
@@ -48,7 +48,7 @@ def send_template(category, city, score, source):
     version = os.environ.get("RADAR_WHATSAPP_GRAPH_VERSION", "v26.0")
     if not re.fullmatch(r"[0-9]{5,30}", phone_id):
         raise ValueError("Identifiant du numéro émetteur invalide")
-    if not re.fullmatch(r"v[0-9]{1,3}\\.[0-9]", version):
+    if not re.fullmatch(r"v[0-9]{1,3}\.[0-9]", version):
         raise ValueError("Version Graph API invalide")
     body = json.dumps(template_payload(category, city, score, source)).encode("utf-8")
     url = f"https://graph.facebook.com/{version}/{phone_id}/messages"
