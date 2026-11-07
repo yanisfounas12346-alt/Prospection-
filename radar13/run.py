@@ -22,6 +22,7 @@ from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 from .engine import classify
+from .bluesky import QUERIES, fetch_search
 from .whatsapp import configured as whatsapp_configured, send_template
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -164,6 +165,31 @@ def scan_feeds(state):
     return fresh, reported
 
 
+def scan_bluesky(state):
+    """Recherche des posts publics par l'API Bluesky, aucune identification privée."""
+    seen = set(state.get("bluesky", []))
+    first = "bluesky" not in state
+    fresh = sent = 0
+    for term in QUERIES:
+        try:
+            posts = fetch_search(term)
+        except Exception as exc:
+            print(f"Bluesky ({term}) indisponible : {type(exc).__name__}", file=sys.stderr)
+            continue
+        # Aucune requête de profil privé, DM, ou contact à l'auteur.
+        for item in reversed(posts):
+            key = fingerprint(item["id"])
+            if key in seen:
+                continue
+            if not first and sent < 10 and alert(item, "Bluesky public"):
+                sent += 1
+            seen.add(key)
+            fresh += 1
+        print(f"Bluesky / {term} : {len(posts)} publications publiques analysées")
+    state["bluesky"] = sorted(seen)[-4000:]
+    return fresh, sent
+
+
 def alert_mailbox():
     host = os.environ.get("RADAR_IMAP_HOST", "")
     user = os.environ.get("RADAR_IMAP_USER", "")
@@ -226,12 +252,15 @@ def main():
     state = load_state()
     try:
         fresh, sent = scan_feeds(state)
+        bsky_fresh, bsky_sent = scan_bluesky(state)
         email_sent = alert_mailbox()
     except Exception as exc:
         print(f"Radar interrompu : {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     save_state(state)
-    print(f"Veille : {fresh} nouveaux éléments, {sent} alertes RSS, {email_sent} alertes IMAP.")
+    print(f"Veille : {fresh} nouveaux éléments RSS, {sent} alertes RSS, "
+          f"{bsky_fresh} posts Bluesky, {bsky_sent} alertes Bluesky, "
+          f"{email_sent} alertes IMAP.")
     return 0
 
 
