@@ -71,6 +71,9 @@ public final class RadarStore {
         item.put("link",link);
         item.put("contact","");
         item.put("status","À examiner");
+        item.put("visited",false);
+        item.put("demo",source!=null && source.startsWith("DÉMO"));
+        item.put("appointment_at","");
         item.put("date",System.currentTimeMillis());
         JSONArray updated=new JSONArray();
         int start=Math.max(0,old.length()-399);
@@ -82,14 +85,58 @@ public final class RadarStore {
       }catch(Exception e){return new AddResult(false,"Erreur de stockage",analysis);}
     }
   }
-  public static void updateStage(Context c,int index,String stage){
+  /**
+   * L'engagement commercial commence par une visite technique gratuite.
+   * Un devis ne peut être émis que si la visite est effectivement terminée.
+   * Retourne false si la transition est interdite ou le dossier n'existe pas.
+   */
+  public static boolean updateStage(Context c,int index,String stage){
     synchronized(LOCK){
-      JSONArray a=leads(c);JSONObject item=a.optJSONObject(index);
-      if(item==null)return;
-      try{item.put("status",stage);prefs(c).edit().putString("leads",a.toString()).apply();}
-      catch(Exception ignored){}
+      JSONArray a=leads(c);
+      JSONObject item=a.optJSONObject(index);
+      if(item==null)return false;
+      boolean visited=item.optBoolean("visited",false) ||
+        "Visite effectuée".equals(item.optString("status"));
+      if(("Devis après visite".equals(stage)||"Chantier signé".equals(stage))&&!visited)
+        return false;
+      try {
+        if("Visite effectuée".equals(stage))item.put("visited",true);
+        item.put("status",stage);
+        prefs(c).edit().putString("leads",a.toString()).apply();
+        return true;
+      }catch(Exception e){return false;}
     }
   }
+
+  public static boolean setVisit(Context c,int index,String when){
+    synchronized(LOCK){
+      JSONArray a=leads(c);
+      JSONObject item=a.optJSONObject(index);
+      if(item==null||when==null||when.trim().isEmpty())return false;
+      try{
+        item.put("appointment_at",when.trim());
+        item.put("status","RDV confirmé");
+        prefs(c).edit().putString("leads",a.toString()).apply();
+        return true;
+      }catch(Exception e){return false;}
+    }
+  }
+
+  public static boolean replaceFromBackup(Context c,JSONArray replacement){
+    if(replacement==null || replacement.length()>500)return false;
+    // Validation basique et limite du volume de données de clients importées.
+    for(int i=0;i<replacement.length();i++){
+      JSONObject lead=replacement.optJSONObject(i);
+      if(lead==null || lead.optString("detail").length()>4000 ||
+         lead.optString("city").length()>160 || lead.optString("contact").length()>250)
+        return false;
+    }
+    synchronized(LOCK){
+      prefs(c).edit().putString("leads",replacement.toString()).apply();
+    }
+    return true;
+  }
+
   public static void clear(Context c){
     synchronized(LOCK){prefs(c).edit().remove("leads").remove("last_match").apply();}
   }
