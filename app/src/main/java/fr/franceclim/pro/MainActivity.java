@@ -130,6 +130,9 @@ public class MainActivity extends Activity {
     root.addView(label("Un numéro publié sur Internet n'autorise pas un appel commercial. En rénovation énergétique, une réponse à une demande explicite de rappel est strictement encadrée.",12,false));
     root.addView(button("Analyser et ajouter la demande",this::saveManual));
     root.addView(button("Importer un CSV de formulaires reçus",this::chooseCsv));
+    root.addView(button("Sauvegarder mes dossiers et contacts (JSON)",this::exportBackup));
+    root.addView(button("Restaurer une sauvegarde de dossiers",this::importBackup));
+    root.addView(label("La sauvegarde contient des données personnelles. Ne la publie jamais sur GitHub et conserve-la dans un emplacement privé.",12,false));
     root.addView(label("OPPORTUNITÉS À EXAMINER",19,true));
     list=new LinearLayout(this);list.setOrientation(1);root.addView(list);
     updateCount();
@@ -397,6 +400,62 @@ public class MainActivity extends Activity {
       }).setNegativeButton("Annuler",null).show();
   }
 
+  private static final int PICK_BACKUP_EXPORT=6402;
+  private static final int PICK_BACKUP_IMPORT=6403;
+
+  private void exportBackup(){
+    new AlertDialog.Builder(this).setTitle("Sauvegarde privée")
+      .setMessage("Le fichier JSON contiendra les noms, numéros, textes et demandes de rappel enregistrés. Conserve-le dans un espace privé et ne le publie pas.")
+      .setPositiveButton("Choisir où enregistrer",(dialog,which)->{
+        Intent create=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        create.addCategory(Intent.CATEGORY_OPENABLE);
+        create.setType("application/json");
+        create.putExtra(Intent.EXTRA_TITLE,"FranceClimRadar13-sauvegarde.json");
+        startActivityForResult(create,PICK_BACKUP_EXPORT);
+      }).setNegativeButton("Annuler",null).show();
+  }
+  private void importBackup(){
+    Intent open=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+    open.addCategory(Intent.CATEGORY_OPENABLE);
+    open.setType("application/json");
+    startActivityForResult(open,PICK_BACKUP_IMPORT);
+  }
+  private void saveBackup(Uri uri){
+    try(java.io.OutputStream out=getContentResolver().openOutputStream(uri,"wt")){
+      if(out==null)throw new java.io.IOException("Destination inaccessible");
+      JSONObject backup=new JSONObject();
+      backup.put("format","FranceClimRadar13-backup");
+      backup.put("version",1);
+      backup.put("exportedAt",System.currentTimeMillis());
+      backup.put("leads",RadarStore.leads(this));
+      out.write(backup.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      Toast.makeText(this,"Sauvegarde créée. Garde ce fichier privé.",Toast.LENGTH_LONG).show();
+    }catch(Exception e){Toast.makeText(this,"Sauvegarde impossible.",Toast.LENGTH_LONG).show();}
+  }
+  private void restoreBackup(Uri uri){
+    try(java.io.InputStream in=getContentResolver().openInputStream(uri)){
+      if(in==null)throw new java.io.IOException("Fichier inaccessible");
+      java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();
+      byte[] buf=new byte[4096];int n;
+      while((n=in.read(buf))!=-1){
+        if(out.size()+n>1400000)throw new java.io.IOException("Fichier trop grand");
+        out.write(buf,0,n);
+      }
+      JSONObject backup=new JSONObject(out.toString("UTF-8"));
+      if(!"FranceClimRadar13-backup".equals(backup.optString("format")))
+        throw new java.io.IOException("Format de sauvegarde non reconnu");
+      JSONArray data=backup.getJSONArray("leads");
+      new AlertDialog.Builder(this).setTitle("Restaurer la sauvegarde")
+        .setMessage(data.length()+" dossiers dans le fichier. La restauration remplacera les dossiers actuellement enregistrés sur le téléphone. Continuer ?")
+        .setPositiveButton("Remplacer les dossiers",(dialog,which)->{
+          if(RadarStore.replaceFromBackup(this,data)){
+            load();render();
+            Toast.makeText(this,"Sauvegarde restaurée.",Toast.LENGTH_LONG).show();
+          }else Toast.makeText(this,"Sauvegarde invalide ou trop volumineuse.",Toast.LENGTH_LONG).show();
+        }).setNegativeButton("Annuler",null).show();
+    }catch(Exception e){Toast.makeText(this,"Import impossible : JSON invalide.",Toast.LENGTH_LONG).show();}
+  }
+
   private static final int PICK_CSV=6401;
   private void chooseCsv(){
     Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -408,8 +467,11 @@ public class MainActivity extends Activity {
   }
   @Override protected void onActivityResult(int request,int result,Intent data){
     super.onActivityResult(request,result,data);
-    if(request!=PICK_CSV||result!=RESULT_OK||data==null||data.getData()==null)return;
+    if(result!=RESULT_OK||data==null||data.getData()==null)return;
     Uri uri=data.getData();
+    if(request==PICK_BACKUP_EXPORT){saveBackup(uri);return;}
+    if(request==PICK_BACKUP_IMPORT){restoreBackup(uri);return;}
+    if(request!=PICK_CSV)return;
     new Thread(()->{
       try(java.io.InputStream stream=getContentResolver().openInputStream(uri)){
         CsvIntake.Report r=CsvIntake.importFile(this,stream);
