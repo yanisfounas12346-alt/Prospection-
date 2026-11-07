@@ -16,7 +16,12 @@ public class RadarJobService extends JobService {
     JobScheduler scheduler=(JobScheduler)ctx.getSystemService(Context.JOB_SCHEDULER_SERVICE);
     if(scheduler==null)return;
     String feeds=ctx.getSharedPreferences("franceclim",MODE_PRIVATE).getString("feeds","");
-    if(feeds==null||feeds.trim().isEmpty()){scheduler.cancel(JOB_ID);return;}
+    boolean enabled=ctx.getSharedPreferences("franceclim",MODE_PRIVATE)
+      .getBoolean("watch_bluesky",true) ||
+      ctx.getSharedPreferences("franceclim",MODE_PRIVATE)
+      .getBoolean("watch_mastodon",true) ||
+      (feeds!=null&&!feeds.trim().isEmpty());
+    if(!enabled){scheduler.cancel(JOB_ID);return;}
     JobInfo info=new JobInfo.Builder(JOB_ID,new ComponentName(ctx,RadarJobService.class))
       .setPeriodic(15L*60L*1000L)
       .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
@@ -26,7 +31,10 @@ public class RadarJobService extends JobService {
   }
   @Override public boolean onStartJob(JobParameters params){
     new Thread(()->{
-      try {RadarScanner.scan(getApplicationContext());}
+      try {
+        RadarScanner.scan(getApplicationContext());
+        BlueskyScanner.scan(getApplicationContext());
+      }
       finally {jobFinished(params,false);}
     },"franceclim-radar").start();
     return true;
