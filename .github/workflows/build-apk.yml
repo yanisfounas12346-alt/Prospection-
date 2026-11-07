@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p build/radar-tests
-          javac -encoding UTF-8 -d build/radar-tests app/src/main/java/fr/franceclim/pro/LeadClassifier.java tests/ClassifierSmoke.java
+          javac -encoding UTF-8 -d build/radar-tests app/src/main/java/fr/franceclim/pro/LeadClassifier.java app/src/main/java/fr/franceclim/pro/RadarClassifier.java tests/ClassifierSmoke.java
           java -cp build/radar-tests fr.franceclim.pro.ClassifierSmoke
 
       - name: Tester le rendu et la confidentialite de la carte
