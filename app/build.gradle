@@ -3,12 +3,12 @@ plugins { id 'com.android.application' }
 android {
   namespace 'fr.franceclim.pro'
   compileSdk 35
-
   defaultConfig {
-    applicationId 'fr.franceclim.radar13'
+    // New app id prevents signature conflicts with the earlier experimental APK.
+    applicationId 'fr.franceclim.pro.radar'
     minSdk 24
-    targetSdk 35
+    targetSdk 33
     versionCode 2
-    versionName '2.0.0'
+    versionName '2.0.0-radar'
   }
 }
