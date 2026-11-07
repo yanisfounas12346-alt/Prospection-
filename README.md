@@ -35,6 +35,15 @@ Les brouillons de réponse ne doivent être utilisés que si le canal et le cadr
 6. Appuyer sur **Tester avec une demande fictive**. Une opportunité de démonstration apparaît ; elle n'est pas un client réel.
 7. Pour importer une publication manuellement : **Partager → France Clim Pro Radar**, puis **Analyser et ajouter**.
 
+## Deux autres sources de veille (facultatives)
+
+- **Flux RSS/Atom autorisés** : dans l'application, ouvrir **Configurer les sources d'annonces RSS** et ajouter une URL HTTPS par ligne. Choisir ensuite **Scanner les sources maintenant**. Android demandera des vérifications périodiques, mais peut les retarder selon l'état de la batterie. Le même CRM reçoit les publications RSS et les notifications des applications sélectionnées.
+- **Veille Python côté GitHub Actions** : le workflow `radar.yml` peut vérifier des flux RSS et un dossier IMAP d'alertes officielles, même quand le téléphone dort. Les alertes Telegram nécessitent des secrets configurés dans GitHub ; aucun identifiant n'est enregistré dans le dépôt.
+
+Pour les étapes exactes : [Guide de mise en service](docs/MISE_EN_SERVICE_RADAR.md).
+
+**La surveillance ne crée pas de prospects** : les annonces ne seront détectées que si les sources publient réellement des demandes de particuliers exploitables.
+
 ## Limites importantes
 
 - **Pas de scraping automatique**, ni d'accès aux plateformes sans leur permission.
