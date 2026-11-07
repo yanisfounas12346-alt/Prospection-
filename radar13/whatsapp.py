@@ -45,7 +45,7 @@ def send_template(category, city, score, source):
         raise RuntimeError("WhatsApp Business Cloud API non configurée")
     token = os.environ["RADAR_WHATSAPP_ACCESS_TOKEN"].strip()
     phone_id = os.environ["RADAR_WHATSAPP_PHONE_NUMBER_ID"].strip()
-    version = os.environ.get("RADAR_WHATSAPP_GRAPH_VERSION", "v26.0")
+    version = os.environ.get("RADAR_WHATSAPP_GRAPH_VERSION") or "v26.0"
     if not re.fullmatch(r"[0-9]{5,30}", phone_id):
         raise ValueError("Identifiant du numéro émetteur invalide")
     if not re.fullmatch(r"v[0-9]{1,3}\.[0-9]", version):
