@@ -44,12 +44,12 @@ def public_link(value):
 
 
 def plain(value):
-    value = re.sub(r"(?is)<(script|style).*?</\\1>", " ", value or "")
+    value = re.sub(r"(?is)<(script|style).*?</\1>", " ", value or "")
     value = re.sub(r"<[^>]+>", " ", value)
     value = html.unescape(value)
-    value = re.sub(r"(?i)\\b[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}\\b", "[e-mail masqué]", value)
-    value = re.sub(r"(?<!\\d)(?:\\+33|0)[1-9](?:[ .-]?\\d{2}){4}(?!\\d)", "[téléphone masqué]", value)
-    return re.sub(r"\\s+", " ", value).strip()
+    value = re.sub(r"(?i)\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b", "[e-mail masqué]", value)
+    value = re.sub(r"(?<!\d)(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}(?!\d)", "[téléphone masqué]", value)
+    return re.sub(r"\s+", " ", value).strip()
 
 
 def parse_feed(raw):
@@ -141,11 +141,11 @@ def alert(item, source):
     result = classify(item["text"])
     if not result or result["score"] < 65:
         return False
-    text = (f"France Clim • Publication à vérifier\\n"
-            f"{result['category']} — {result['city']}\\n"
-            f"Priorité : {result['score']}/100\\n"
-            f"Source : {source}\\n"
-            f"{plain(item['text'])[:170]}\\n"
+    text = (f"France Clim • Publication à vérifier\n"
+            f"{result['category']} — {result['city']}\n"
+            f"Priorité : {result['score']}/100\n"
+            f"Source : {source}\n"
+            f"{plain(item['text'])[:170]}\n"
             f"{item.get('link','')}")
     telegram_send(text[:750])
     return True
@@ -208,13 +208,13 @@ def alert_mailbox():
             subject = str(make_header(decode_header(msg.get("Subject", ""))))
             body = msg.get_body(preferencelist=("plain", "html"))
             text = plain(subject+" "+(body.get_content() if body else ""))
-            link_match = re.search(r"https://[^\\s<>\\\"']+", text)
+            link_match = re.search(r"https://[^\s<>\\"']+", text)
             url = public_link(link_match.group(0)) if link_match else ""
             item = {"id": fingerprint(subject + text), "text": text, "link": url}
             if alert(item, "Alerte e-mail officielle"):
                 result += 1
             # Marquer lu seulement après traitement dans le dossier dédié.
-            client.store(uid, "+FLAGS", "\\Seen")
+            client.store(uid, "+FLAGS", r"\Seen")
     return result
 
 
