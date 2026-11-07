@@ -1,0 +1,34 @@
+name: Tests du Radar Python
+
+on:
+  push:
+    paths:
+      - 'radar13/**'
+      - 'fixtures/**'
+      - 'config/sources.json'
+      - '.github/workflows/radar-tests.yml'
+  pull_request:
+    paths:
+      - 'radar13/**'
+      - 'fixtures/**'
+      - '.github/workflows/radar-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Vérifier syntaxe
+        run: python -m compileall -q radar13
+      - name: Tests unitaires
+        run: python -m unittest discover -s radar13 -p 'test_*.py' -v
+      - name: Démonstration sur flux fictif
+        run: python -m radar13.run --demo
