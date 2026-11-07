@@ -1,0 +1,174 @@
+package fr.franceclim.pro;
+
+import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserFactory;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+/** Scanner autonome de flux RSS/Atom dont la consultation est autorisée. */
+public final class RadarScanner {
+  private RadarScanner(){}
+  public static final class Report {
+    public int feeds, checked, added, errors;
+    @Override public String toString() {return feeds+" source(s), "+checked+" publication(s), "+added+
+      " opportunité(s), "+errors+" erreur(s)";}
+  }
+  private static final class Entry {
+    String title="", description="", link="", id="";
+  }
+
+  public static synchronized Report scan(Context ctx) {
+    Report report=new Report();
+    SharedPreferences prefs=ctx.getSharedPreferences("franceclim",Context.MODE_PRIVATE);
+    String configured=prefs.getString("feeds","").trim();
+    if(configured.isEmpty()){
+      prefs.edit().putString("scan_status","Aucune source RSS configurée").apply();
+      return report;
+    }
+    JSONArray leads;
+    try {leads=new JSONArray(prefs.getString("leads","[]"));} catch(Exception e){leads=new JSONArray();}
+    Set<String> seen=new LinkedHashSet<>(prefs.getStringSet("seen",Collections.<String>emptySet()));
+    boolean first=prefs.getBoolean("radar_initialized",false);
+    int attempted=0;
+    for(String raw:configured.split("\\r?\\n")){
+      String feed=raw.trim();
+      if(feed.isEmpty()||feed.startsWith("#"))continue;
+      if(++attempted>20)break;
+      report.feeds++;
+      if(!feed.startsWith("https://")){report.errors++;continue;}
+      try {
+        String xml=download(feed);
+        XmlPullParser p=XmlPullParserFactory.newInstance().newPullParser();
+        p.setInput(new StringReader(xml));
+        Entry entry=null;
+        int count=0;
+        for(int event=p.getEventType();event!=XmlPullParser.END_DOCUMENT;event=p.next()){
+          String tag=p.getName();
+          if(event==XmlPullParser.START_TAG && ("item".equalsIgnoreCase(tag)||"entry".equalsIgnoreCase(tag))){
+            entry=new Entry(); continue;
+          }
+          if(entry==null)continue;
+          if(event==XmlPullParser.START_TAG){
+            if("title".equalsIgnoreCase(tag))entry.title=p.nextText();
+            else if("description".equalsIgnoreCase(tag)||"summary".equalsIgnoreCase(tag))entry.description=p.nextText();
+            else if("link".equalsIgnoreCase(tag)){
+              String href=p.getAttributeValue(null,"href");
+              if(href!=null)entry.link=href;
+              else entry.link=p.nextText();
+            } else if("guid".equalsIgnoreCase(tag)||"id".equalsIgnoreCase(tag))entry.id=p.nextText();
+          } else if(event==XmlPullParser.END_TAG && ("item".equalsIgnoreCase(tag)||"entry".equalsIgnoreCase(tag))){
+            report.checked++;
+            if(count++<100) handle(ctx,prefs,seen,leads,entry,feed,first,report);
+            entry=null;
+          }
+        }
+      } catch(Exception e){
+        report.errors++;
+      }
+    }
+    // Pas de données personnelles publiées sur GitHub ; stockage uniquement sur ce téléphone.
+    if(seen.size()>3000){
+      Set<String> reduced=new LinkedHashSet<>();
+      int skip=seen.size()-2500;
+      for(String h:seen)if(skip-->0){}else reduced.add(h);
+      seen=reduced;
+    }
+    prefs.edit().putString("leads",leads.toString()).putStringSet("seen",new LinkedHashSet<>(seen))
+      .putBoolean("radar_initialized",true)
+      .putString("scan_status",report.toString()+" • "+new java.util.Date().toString()).apply();
+    return report;
+  }
+
+  private static void handle(Context ctx,SharedPreferences prefs,Set<String> seen,JSONArray leads,
+    Entry entry,String feed,boolean first,Report report) {
+    String content=clean(entry.title+" "+entry.description);
+    RadarClassifier.Result result=RadarClassifier.analyse(content);
+    if(result==null)return;
+    String key=sha((entry.link.isEmpty()?entry.id:entry.link).trim());
+    if(key.equals(sha("")))key=sha(content);
+    if(seen.contains(key))return;
+    seen.add(key);
+    try {
+      JSONObject lead=new JSONObject();
+      lead.put("type",result.category);lead.put("city",result.city);
+      lead.put("detail",content.length()>600?content.substring(0,600):content);
+      lead.put("status","À vérifier");lead.put("score",result.score);
+      lead.put("source",feed);lead.put("link",entry.link);lead.put("contact","");
+      lead.put("date",System.currentTimeMillis());lead.put("automatic",true);
+      leads.put(lead);report.added++;
+      if(first)notifyLead(ctx,lead);
+    }catch(Exception ignored){}
+  }
+
+  private static String clean(String text){
+    return text.replaceAll("<[^>]*>"," ").replace("&nbsp;"," ").replace("&amp;","&")
+      .replace("&quot;","\\\"").replaceAll("\\s+"," ").trim();
+  }
+  private static String sha(String s){
+    try {
+      byte[] bytes=MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8));
+      StringBuilder b=new StringBuilder();
+      for(int i=0;i<12;i++)b.append(String.format(java.util.Locale.ROOT,"%02x",bytes[i]&255));
+      return b.toString();
+    }catch(Exception e){return Integer.toHexString(s.hashCode());}
+  }
+  private static String download(String url) throws Exception {
+    HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
+    c.setConnectTimeout(12000);c.setReadTimeout(12000);
+    c.setRequestProperty("User-Agent","FranceClimPro-Radar/2.0 (RSS/Atom)");
+    try {
+      if(c.getResponseCode()!=200)throw new java.io.IOException("HTTP "+c.getResponseCode());
+      ByteArrayOutputStream out=new ByteArrayOutputStream();
+      try(InputStream input=c.getInputStream()){
+        byte[] buffer=new byte[4096];int n;
+        while((n=input.read(buffer))!=-1){
+          if(out.size()+n>1024*1024)throw new java.io.IOException("Flux trop volumineux");
+          out.write(buffer,0,n);
+        }
+      }
+      return out.toString("UTF-8");
+    }finally{c.disconnect();}
+  }
+  private static void notifyLead(Context ctx,JSONObject lead){
+    if(Build.VERSION.SDK_INT>=33 &&
+       ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
+    NotificationManager manager=(NotificationManager)ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+    if(manager==null)return;
+    String channel="radar13";
+    if(Build.VERSION.SDK_INT>=26){
+      NotificationChannel nc=new NotificationChannel(channel,"Nouvelles demandes particuliers",NotificationManager.IMPORTANCE_HIGH);
+      nc.setDescription("Demandes potentielles à vérifier dans les Bouches-du-Rhône");
+      manager.createNotificationChannel(nc);
+    }
+    Intent open=new Intent(ctx,MainActivity.class);
+    PendingIntent pi=PendingIntent.getActivity(ctx,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
+    String title=lead.optString("type")+" - "+lead.optString("city");
+    Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(ctx,channel):new Notification.Builder(ctx);
+    b.setSmallIcon(android.R.drawable.ic_dialog_info)
+      .setContentTitle("France Clim : nouvelle demande à vérifier")
+      .setContentText(title+" • score "+lead.optInt("score"))
+      .setContentIntent(pi).setAutoCancel(true);
+    manager.notify((int)(System.currentTimeMillis()%Integer.MAX_VALUE),b.build());
+  }
+}
