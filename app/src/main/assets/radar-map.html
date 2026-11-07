@@ -16,6 +16,8 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 .brand{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
 .brand strong{font-size:17px;letter-spacing:.15px;color:var(--navy)}
 .brand small{display:block;color:#577180;font-size:11px;margin-top:2px}
+.brandRight{display:flex;align-items:center;gap:7px;flex:none}
+.sourcesBtn{border:1px solid #c7dbde;border-radius:11px;background:#f2f9f8;color:#006a65;padding:7px 9px;font-size:12px;font-weight:800}
 .counter{background:#e7f7f3;color:#07574e;border-radius:12px;padding:5px 8px;font-weight:800;font-size:12px;white-space:nowrap}
 .searchrow{display:flex;gap:7px}.searchrow input{min-width:0;flex:1;border:1px solid #cddde2;border-radius:11px;background:#f5f9fb;padding:10px 11px;color:var(--ink);outline-offset:1px}
 .smallbutton{border:0;border-radius:10px;background:var(--navy);color:#fff;min-width:41px;padding:9px 10px;font-size:18px}
@@ -51,14 +53,14 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 #fallback h3{padding:0 18px}#fallback .item{margin:10px 15px}
 #emptyState{position:absolute;z-index:900;bottom:72px;left:16px;right:16px;max-width:370px;margin:auto;padding:13px 15px;background:#fffffff3;border-radius:14px;box-shadow:var(--shadow);text-align:center;display:none}
 #emptyState b{display:block;font-size:15px}#emptyState span{color:#587080;font-size:12px}
-@media(max-width:370px){.brand strong{font-size:15px}.filter{padding:7px 9px}.header{padding:10px}.counter{font-size:11px}#notice{top:157px}}
+@media(max-width:370px){.brand strong{font-size:15px}.sourcesBtn{padding:6px;font-size:11px}.brandRight{gap:4px}.filter{padding:7px 9px}.header{padding:10px}.counter{font-size:11px}#notice{top:157px}}
 </style>
 </head>
 <body>
 <div id="map" aria-label="Carte des opportunités du département 13"></div>
 <div id="fallback" aria-label="Liste des opportunités sans fond cartographique"><h3>Opportunités sans carte</h3><div id="fallbackItems"></div></div>
 <header class="header">
-  <div class="brand"><div><strong>FRANCE CLIM <span style="color:#008f86">RADAR 13</span></strong><small>Opportunités de particuliers • Bouches-du-Rhône</small></div><div class="counter" id="counter">0 piste</div></div>
+  <div class="brand"><div><strong>FRANCE CLIM <span style="color:#008f86">RADAR 13</span></strong><small>Opportunités de particuliers • Bouches-du-Rhône</small></div><div class="brandRight"><button class="sourcesBtn" id="sources" aria-label="Configurer les sources d'annonces">Sources ⚙</button><div class="counter" id="counter">0 piste</div></div></div>
   <div class="searchrow"><input id="search" type="search" placeholder="Rechercher une ville ou un besoin…" aria-label="Filtrer les opportunités"><button class="smallbutton" id="fit" title="Recentrer la carte" aria-label="Recentrer la carte">⌖</button></div>
   <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button><button class="filter" data-filter="high">🔥 Prioritaires</button></div>
 </header>
@@ -208,6 +210,9 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   $('list').addEventListener('click',()=>{
     focused=null;
     showSheet('Toutes les opportunités','Triées par priorité · '+filtered().length+' résultat(s)',filtered());
+  });
+  $('sources').addEventListener('click',()=>{
+    if(window.RadarNative&&typeof window.RadarNative.sources==='function')window.RadarNative.sources();
   });
   $('refresh').addEventListener('click',()=>{
     if(window.RadarNative&&typeof window.RadarNative.refresh==='function'&&!loading){
