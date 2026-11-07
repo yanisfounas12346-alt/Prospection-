@@ -162,7 +162,7 @@ public final class RadarScanner {
       return out.toString("UTF-8");
     }finally{c.disconnect();}
   }
-  private static void notifyLead(Context ctx,JSONObject lead){
+  static void notifyLead(Context ctx,JSONObject lead){
     if(Build.VERSION.SDK_INT>=33 &&
        ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return;
     NotificationManager manager=(NotificationManager)ctx.getSystemService(Context.NOTIFICATION_SERVICE);
