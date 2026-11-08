@@ -112,7 +112,10 @@ public final class CsvIntake {
       // Source explicitement fournie au professionnel ; aucune extraction
       // depuis une base privée ou récupération de coordonnées tierces.
       String label="Formulaire direct / CSV"+(source.isEmpty()?"":" ("+source.substring(0,Math.min(65,source.length()))+")");
-      RadarStore.AddResult result=RadarStore.add(ctx,text,city,label);
+      // Identical requests from different people must remain distinct leads.
+      // The identity is included only in the SHA-256 fingerprint, never shown on the map.
+      String identity=!phone.isEmpty()?phone:name;
+      RadarStore.AddResult result=RadarStore.addWithIdentity(ctx,text,city,label,identity);
       if(!result.added){
         if(result.classification!=null&&result.classification.eligible)report.duplicates++;
         else report.ignored++;
