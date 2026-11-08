@@ -1,4 +1,8 @@
-# France Clim Pro Radar 2.2 — vrais flux publics, carte, contacts communiqués
+# France Clim Pro Radar 2.6 — veille locale, dossiers chiffrés et suivi
+
+**Nouveauté 2.6 (bêta) :** les dossiers du CRM sont chiffrés en AES-GCM par une clé Android Keystore, avec migration des dossiers locaux après une écriture chiffrée réussie. Les imports CSV différencient les demandeurs qui décrivent des travaux identiques et rattachent les coordonnées à la bonne fiche par empreinte stable. Les erreurs d'enregistrement RSS ne font plus disparaître silencieusement une demande. Ces changements nécessitent une nouvelle APK compilée et un test sur téléphone réel. Conserver une sauvegarde privée avant toute mise à jour ; une sauvegarde JSON exportée reste en clair.
+
+**Limites à connaître :** les scans côté GitHub ne synchronisent pas les prospects vers le téléphone. La veille programmée toutes les 15 minutes n'est pas une garantie de temps réel (Android et GitHub peuvent retarder ou omettre des déclenchements). Une demande sur une plateforme privée n'est pas accessible sans autorisation. Aucun numéro de téléphone n'est récupéré depuis un profil privé.
 
 **Nouveauté 2.2 :** recherche automatique des publications publiques Bluesky via API officielle et surveillance des deux flux RSS publics Mastodon (#climatisation et #chauffeeau), vérifiés HTTP 200 le 7 novembre 2026. Sources activées par défaut dans l'application. Ce sont de vraies publications, mais elles ne sont pas forcément des demandes de particuliers dans le 13. Aucune liste de contacts ni numéro personnel ne peut être obtenu automatiquement à partir d'un profil privé.
 
@@ -66,7 +70,7 @@ Pour les étapes exactes : [Guide de mise en service](docs/MISE_EN_SERVICE_RADAR
 - Une recherche sauvegardée Leboncoin ne garantit **pas** de retrouver les particuliers recherchant un artisan : une grande partie du site est constituée de ventes.
 - Le radar **ne détecte pas les publications qu'Android ne notifie pas** (contenus de groupe privé sans notification, annonces nouvelles sans alerte, téléphone hors ligne, notifications masquées).
 - Le lien d'annonce peut manquer si la notification ne le fournit pas. Ouvrir l'application d'origine.
-- Les coordonnées clients sont stockées **localement** dans les préférences de l'application. Cette version n'a **aucune synchronisation ni sauvegarde cloud**, et le stockage local n'est pas chiffré : éviter d'y conserver des données sensibles.
+- Les dossiers clients sont chiffrés localement en AES-GCM avec une clé Android Keystore depuis la v2.6. La synchronisation et les sauvegardes cloud sont toujours absentes. Les exports JSON restent **non chiffrés** : les garder dans un emplacement privé.
 - Une APK de test (debug) n'est pas destinée à une distribution publique. Les signatures de deux builds GitHub peuvent différer ; cette version utilise un identifiant distinct de l'ancienne application pour éviter les conflits à l'installation.
 - Il faut tester l'installation et les notifications sur un téléphone Android réel.
 - Le score de qualification n'est ni une estimation de prix ni une probabilité d'obtenir un chantier.
