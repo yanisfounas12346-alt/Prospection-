@@ -377,8 +377,12 @@ public class MapActivity extends Activity {
       try {
         RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
         BlueskyScanner.Report sky=BlueskyScanner.scan(getApplicationContext());
-        status="Analyse terminée • "+rss.added+" nouvelle(s) piste(s) RSS, "+
-          sky.added+" Bluesky. Touchez une épingle pour les détails.";
+        status="Veille terminée : "+rss.checked+" publication(s) RSS examinée(s), "+
+          sky.posts+" Bluesky. "+(rss.added+sky.added)+" nouvelle(s) piste(s). "+
+          (rss.errors+sky.errors>0
+            ?(rss.errors+sky.errors)+" source(s)/recherche(s) en erreur. "
+            :"")+
+          "Les alertes des plateformes nécessitent une configuration séparée.";
       }catch(Exception e){status="Certaines sources sont indisponibles. Les dossiers déjà enregistrés restent visibles.";}
       final String note=status;
       scanning.set(false);
