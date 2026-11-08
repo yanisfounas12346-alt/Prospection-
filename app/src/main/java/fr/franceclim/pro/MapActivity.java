@@ -274,6 +274,11 @@ public class MapActivity extends Activity {
       }).setNegativeButton("Annuler",null).show();
   }
 
+  private static String formatScanDate(long timestamp){
+    return timestamp>0?new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm",
+      java.util.Locale.FRANCE).format(new java.util.Date(timestamp)):"Jamais";
+  }
+
   private void showSourcesStatus(){
     int checked=prefs.getInt("notification_checked",0);
     String result=prefs.getString("notification_last_result","Aucune alerte encore examinée");
@@ -290,7 +295,10 @@ public class MapActivity extends Activity {
       +"\\nDernière source : "+source
       +"\\nDernier résultat : "+result
       +"\\nFlux RSS : "+prefs.getString("scan_status","Jamais analysés")
-      +"\\nBluesky : "+prefs.getString("bluesky_scan_status","Jamais analysé");
+      +"\\nBluesky : "+prefs.getString("bluesky_scan_status","Jamais analysé")
+      +"\\nVeille Android en arrière-plan : "+prefs.getString("background_scan_summary","Pas encore de rapport")
+      +"\\nDernière veille Android terminée : "+formatScanDate(prefs.getLong("background_scan_completed_at",0))
+      +"\\nDernière erreur Android : "+prefs.getString("background_scan_error","Aucune enregistrée");
     new AlertDialog.Builder(this).setTitle("Diagnostic du radar")
       .setMessage(status)
       .setPositiveButton("OK",null).show();
@@ -370,8 +378,8 @@ public class MapActivity extends Activity {
     if(!scanning.compareAndSet(false,true))return;
     // L'heure est conservée pour éviter une boucle au retour de l'application.
     prefs.edit().putLong("map_last_scan_at",System.currentTimeMillis()).apply();
-    eval("setRadarBusy","true");
     eval("setRadarStatus",JSONObject.quote("Recherche automatique des nouvelles demandes en cours…"));
+    eval("setRadarBusy","true");
     new Thread(()->{
       String status;
       try {
