@@ -10,7 +10,8 @@ on:
       - '.github/workflows/radar.yml'
   workflow_dispatch:
   schedule:
-    - cron: '*/15 * * * *'
+    # Éviter le début des heures, plus chargé sur GitHub Actions.
+    - cron: '3,18,33,48 * * * *'
 
 permissions:
   contents: write
