@@ -185,6 +185,8 @@ def scan_bluesky(state):
     """Recherche des posts publics par l'API Bluesky, aucune identification privée."""
     seen = set(state.get("bluesky", []))
     first = "bluesky" not in state
+    # One post can match several keywords; do not count or alert it repeatedly.
+    batch = set()
     fresh = sent = 0
     for term in QUERIES:
         try:
@@ -195,8 +197,9 @@ def scan_bluesky(state):
         # Aucune requête de profil privé, DM, ou contact à l'auteur.
         for item in reversed(posts):
             key = fingerprint(item["id"])
-            if key in seen:
+            if key in seen or key in batch:
                 continue
+            batch.add(key)
             qualified = needs_alert(item)
             acknowledged = not qualified
             if qualified and first:
