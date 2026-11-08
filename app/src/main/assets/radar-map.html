@@ -63,7 +63,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 <header class="header">
   <div class="brand"><div><strong>FRANCE CLIM <span style="color:#008f86">RADAR 13</span></strong><small>Opportunités de particuliers • Bouches-du-Rhône</small></div><div class="brandRight"><button class="sourcesBtn" id="sources" aria-label="Configurer les sources d'annonces">Sources ⚙</button><div class="counter" id="counter">0 piste</div></div></div>
   <div class="searchrow"><input id="search" type="search" placeholder="Rechercher une ville ou un besoin…" aria-label="Filtrer les opportunités"><button class="smallbutton" id="fit" title="Recentrer la carte" aria-label="Recentrer la carte">⌖</button></div>
-  <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button><button class="filter" data-filter="high">🔥 Prioritaires</button></div>
+  <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="requests">Demandes ciblées</button><button class="filter" data-filter="callbacks">☎ Rappels</button><button class="filter" data-filter="review">À vérifier</button><button class="filter" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button></div>
 </header>
 <div id="notice" role="status" aria-live="polite">Chargement des opportunités…</div>
 <div id="emptyState"><b>Aucune demande détectée pour le moment</b><span id="emptyExplanation">Les flux publics ne garantissent pas de demandes locales. Active les alertes des plateformes de travaux dans Sources.</span><span id="emptyScanStatus" role="status" aria-live="polite"></span><button type="button" id="startSources" class="emptyConnect">Configurer les sources</button></div>
@@ -77,11 +77,14 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
-  let pins=[],unlocated=[],mode='all',term='',map=null,markers=null,first=true,focused=null,loading=false,scanStatus='',callableCount=0;
+  let pins=[],unlocated=[],mode='requests',term='',map=null,markers=null,first=true,focused=null,loading=false,scanStatus='',callableCount=0;
   const all=()=>pins.flatMap(p=>Array.isArray(p.opportunities)?p.opportunities:[]).concat(unlocated);
   const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const matches=o=>{
     const type=norm(o.type),city=norm(o.city),q=norm(term);
+    if(mode==='requests'&&!o.explicit)return false;
+    if(mode==='callbacks'&&!o.callback)return false;
+    if(mode==='review'&&o.explicit)return false;
     if(mode==='clim'&&!type.includes('clim'))return false;
     if(mode==='eau'&&!(type.includes('eau')||type.includes('cumulus')))return false;
     if(mode==='high'&&Number(o.score||0)<75)return false;
@@ -99,7 +102,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   function itemCard(o){
     const card=node('article','item');
     const top=node('div','itemtop');
-    top.appendChild(node('div','itemtitle',(o.type||'Demande')+' · '+(o.city||'Ville à préciser')));
+    top.appendChild(node('div','itemtitle',(o.callback?'RAPPEL DEMANDÉ · ':o.explicit?'BESOIN EXPRIMÉ · ':'À VÉRIFIER · ')+(o.type||'Demande')+' · '+(o.city||'Ville à préciser')));
     const score=Number(o.score)||0;
     top.appendChild(node('span','score'+(score>=75?' high':''),score+'/100'));
     card.appendChild(top);
@@ -129,7 +132,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     $('sheetTitle').textContent=title;
     $('sheetSub').textContent=subtitle;
     $('items').replaceChildren();
-    const sorted=entries.slice().sort((a,b)=>Number(b.score||0)-Number(a.score||0));
+    const sorted=entries.slice().sort((a,b)=>Number(Boolean(b.callback))-Number(Boolean(a.callback))||Number(Boolean(b.explicit))-Number(Boolean(a.explicit))||Number(b.score||0)-Number(a.score||0));
     if(!sorted.length)$('items').appendChild(node('p','empty','Aucune opportunité avec ces filtres.'));
     sorted.forEach(o=>$('items').appendChild(itemCard(o)));
     $('sheet').classList.add('open');
@@ -153,12 +156,14 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   function draw(autoFit){
     const entries=filtered();
     positionNotice();
-    $('counter').textContent=entries.length+(entries.length>1?' pistes':' piste')+' · '+callableCount+' rappel(s)';
-    $('counter').title=callableCount+' fiche(s) avec numéro et demande de rappel documentée sur le téléphone';
+    const validated=all().filter(o=>o.explicit).length;
+    $('counter').textContent=validated+' besoin(s) · '+callableCount+' rappel(s)';
+    $('counter').title=validated+' demandes explicites potentielles, dont '+callableCount+' avec téléphone et preuve de rappel';
     $('list').title='Voir '+entries.length+' opportunités';
     const geolocated=entries.filter(o=>o.geo!==false).length;
     $('notice').textContent=loading?'Recherche des sources en cours…':(scanStatus||(entries.length?geolocated+' dossier(s) placés · position approximative des communes':''));
     $('emptyState').style.display=entries.length?'none':'block';
+    $('emptyExplanation').textContent=mode==='requests'?'Aucune demande explicite détectée. Les publications vagues sont conservées dans « À vérifier ».':mode==='callbacks'?'Aucune fiche avec téléphone et demande de rappel documentée.':'Aucune opportunité avec ces filtres.';
     $('emptyScanStatus').textContent=loading?'Analyse en cours…':scanStatus;
     if(map&&markers){
       markers.clearLayers();
@@ -216,7 +221,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   $('fit').addEventListener('click',()=>{hideSheet();draw(true)});
   $('list').addEventListener('click',()=>{
     focused=null;
-    showSheet('Toutes les opportunités','Triées par priorité · '+filtered().length+' résultat(s)',filtered());
+    showSheet('Opportunités filtrées','Rappels en premier · '+filtered().length+' résultat(s)',filtered());
   });
   $('startSources').addEventListener('click',()=>{
     if(window.RadarNative&&typeof window.RadarNative.sources==='function')window.RadarNative.sources();
