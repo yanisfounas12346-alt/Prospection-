@@ -51,6 +51,10 @@ export default async function handler(req,res){
        verdict.action!=='demande_rappel')
       return message(res,400,'Vérification anti-spam refusée.');
 
+    // Attribution indicative : donnees non fiables, jamais utilisees comme preuve de consentement.
+    const origins=new Set(['climatisation','chauffe-eau','panne-eau-chaude','direct','partenaire','qr']);
+    const candidate=String(req.body.origine||'direct');
+    const origine=origins.has(candidate)?candidate:'direct';
     const delivered=await fetch('https://api.resend.com/emails',{
       method:'POST',
       headers:{
@@ -62,7 +66,7 @@ export default async function handler(req,res){
         from:process.env.LEAD_FROM_EMAIL,
         to:[process.env.LEAD_TO_EMAIL],
         subject:'Demande de rappel '+parsed.value.service+' — '+parsed.value.ville,
-        text:emailText(parsed.value,new Date().toISOString(),id)
+        text:emailText(parsed.value,new Date().toISOString(),id,origine)
       }),
       signal:AbortSignal.timeout(9000)
     });
