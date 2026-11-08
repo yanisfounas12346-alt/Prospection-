@@ -316,7 +316,8 @@ public class MapActivity extends Activity {
       +"\\nBluesky : "+prefs.getString("bluesky_scan_status","Jamais analysé")
       +"\\nVeille Android en arrière-plan : "+prefs.getString("background_scan_summary","Pas encore de rapport")
       +"\\nDernière veille Android terminée : "+formatScanDate(prefs.getLong("background_scan_completed_at",0))
-      +"\\nDernière erreur Android : "+prefs.getString("background_scan_error","Aucune enregistrée");
+      +"\\nDernière erreur Android : "+prefs.getString("background_scan_error","Aucune enregistrée")
+      +"\\nSources/recherches échouées : "+prefs.getString("last_scan_failures","Aucune erreur détaillée");
     new AlertDialog.Builder(this).setTitle("Diagnostic du radar")
       .setMessage(status)
       .setPositiveButton("OK",null).show();
@@ -403,6 +404,9 @@ public class MapActivity extends Activity {
       try {
         RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
         BlueskyScanner.Report sky=BlueskyScanner.scan(getApplicationContext());
+        prefs.edit().putString("last_scan_failures",
+          (rss.failedSources.isEmpty()?"":("RSS : "+rss.failedSources))+
+          (sky.failedQueries.isEmpty()?"":("Bluesky : "+sky.failedQueries))).apply();
         status="Recherche terminée : RSS "+rss.checked+" publication(s), "+
           rss.errors+" erreur(s) ; Bluesky "+sky.posts+" publication(s), "+
           sky.errors+" erreur(s). "+(rss.added+sky.added)+
