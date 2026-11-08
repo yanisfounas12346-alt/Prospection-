@@ -299,6 +299,13 @@ public class MapActivity extends Activity {
       java.util.Locale.FRANCE).format(new java.util.Date(timestamp)):"Jamais";
   }
 
+  private String sourceYield(String family){
+    String key="source_metrics_"+family+"_";
+    return prefs.getInt(key+"examined",0)+" / "+
+      prefs.getInt(key+"accepted",0)+" / "+
+      prefs.getInt(key+"priority",0);
+  }
+
   private void showSourcesStatus(){
     int checked=prefs.getInt("notification_checked",0);
     String result=prefs.getString("notification_last_result","Aucune alerte encore examinée");
@@ -311,6 +318,12 @@ public class MapActivity extends Activity {
       +"\\nAutres plateformes installées : "+platforms.size()
       +"\\nBluesky : "+(prefs.getBoolean("watch_bluesky",true)?"actif":"désactivé")
       +"\\nMastodon : "+(prefs.getBoolean("watch_mastodon",true)?"actif":"désactivé")
+      +"\\nRendement Leboncoin (alertes / dossiers / prioritaires) : "+
+        sourceYield("leboncoin")
+      +"\\nRendement Facebook (alertes / dossiers / prioritaires) : "+
+        sourceYield("facebook")
+      +"\\nRendement plateformes travaux (alertes / dossiers / prioritaires) : "+
+        sourceYield("autres")
       +"\\nNotifications examinées : "+checked
       +"\\nDernière source : "+source
       +"\\nDernier résultat : "+result
