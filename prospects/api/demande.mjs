@@ -40,8 +40,7 @@ export default async function handler(req,res){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         secret:process.env.TURNSTILE_SECRET,
-        response:captcha,
-        idempotency_key:id
+        response:captcha
       }),
       signal:AbortSignal.timeout(8000)
     });
