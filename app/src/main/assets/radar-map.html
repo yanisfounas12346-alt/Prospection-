@@ -66,7 +66,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button><button class="filter" data-filter="high">🔥 Prioritaires</button></div>
 </header>
 <div id="notice" role="status" aria-live="polite">Chargement des opportunités…</div>
-<div id="emptyState"><b>Pas encore d'annonces qualifiées dans le 13</b><span>Connecte AlloVoisins, Leboncoin et les autres plateformes pour recevoir les demandes de particuliers.</span><button type="button" id="startSources" class="emptyConnect">Configurer les sources</button></div>
+<div id="emptyState"><b>Aucune demande détectée pour le moment</b><span id="emptyExplanation">Les flux publics ne garantissent pas de demandes locales. Active les alertes des plateformes de travaux dans Sources.</span><span id="emptyScanStatus" role="status" aria-live="polite"></span><button type="button" id="startSources" class="emptyConnect">Configurer les sources</button></div>
 <div class="mapactions"><button id="list" class="action" title="Voir les opportunités" aria-label="Voir la liste des opportunités">☷</button><button id="refresh" class="action primary" title="Actualiser les opportunités" aria-label="Relancer le radar">↻</button></div>
 <section id="sheet" role="dialog" aria-label="Détails des opportunités" aria-modal="false">
   <div class="sheethead"><div><strong id="sheetTitle">Opportunités</strong><p id="sheetSub">Publications à vérifier</p></div><button class="close" id="close" aria-label="Fermer les détails">×</button></div>
@@ -77,7 +77,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
-  let pins=[],unlocated=[],mode='all',term='',map=null,markers=null,first=true,focused=null,loading=false;
+  let pins=[],unlocated=[],mode='all',term='',map=null,markers=null,first=true,focused=null,loading=false,scanStatus='';
   const all=()=>pins.flatMap(p=>Array.isArray(p.opportunities)?p.opportunities:[]).concat(unlocated);
   const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const matches=o=>{
@@ -153,8 +153,9 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     $('counter').textContent=entries.length+(entries.length>1?' pistes':' piste');
     $('list').title='Voir '+entries.length+' opportunités';
     const geolocated=entries.filter(o=>o.geo!==false).length;
-    $('notice').textContent=loading?'Recherche des sources en cours…':(entries.length?geolocated+' dossier(s) placés · position approximative des communes':'');
+    $('notice').textContent=loading?'Recherche des sources en cours…':(scanStatus||(entries.length?geolocated+' dossier(s) placés · position approximative des communes':''));
     $('emptyState').style.display=entries.length?'none':'block';
+    $('emptyScanStatus').textContent=loading?'Analyse en cours…':scanStatus;
     if(map&&markers){
       markers.clearLayers();
       const bounds=[];
@@ -197,7 +198,8 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   };
   window.setRadarStatus=function(message){
     loading=false;$('refresh').disabled=false;
-    $('notice').textContent=String(message||'');
+    scanStatus=String(message||'');
+    draw(false);
   };
   document.querySelectorAll('[data-filter]').forEach(b=>{
     b.addEventListener('click',()=>{
