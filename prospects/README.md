@@ -1,6 +1,13 @@
 # France Clim — formulaire entrant de rappel (département 13)
 
-Cette application web crée une **source directe de demandes de particuliers**, plutôt que d'inventer des contacts depuis des réseaux sociaux. Elle n'est **pas mise en production** tant que les variables secrètes ne sont pas configurées.
+Cette application web crée une **source directe de demandes de particuliers**, plutôt que d'inventer des contacts depuis des réseaux sociaux.
+
+**Site déployé :** https://france-clim-demandes-13.vercel.app — projet Vercel `france-clim-demandes-13`, équipe `yanisfounas12346-1342`.
+Le déploiement de production a réussi et les **10 tests Node ont passé sur Vercel (10/10)** le 8 novembre 2026. Les variables d'environnement sont actuellement absentes : **le formulaire est affiché mais les envois sont désactivés (fail-closed)**.
+La protection SSO Vercel a été désactivée uniquement pour ce projet afin de pouvoir recevoir des visiteurs sans compte.
+Les fichiers ont été déployés directement : **les commits GitHub ultérieurs ne sont pas encore automatiquement synchronisés sur Vercel** ; reconnecter GitHub ou déployer explicitement les nouvelles versions.
+
+
 
 ## Ce qui est livré
 - Formulaire français pour climatisation/chauffe-eau, 13xxx, nom, téléphone, commune et besoin.
@@ -11,7 +18,9 @@ Cette application web crée une **source directe de demandes de particuliers**, 
 - Tests de non-régression : `cd prospects && npm test`.
 
 ## Déploiement Vercel
-Créer un projet Vercel relié au dépôt `yanisfounas12346-alt/Prospection-`, avec **Root Directory : `prospects`** et Framework : Other.
+Le projet Vercel est **déjà créé** et une version a été déployée depuis les fichiers du sous-dossier `prospects`, sans liaison Git automatique.
+
+Avant d'activer le formulaire, renseigner **Project Settings → Environment Variables**, cibler **Production** et redéployer le site pour que les fonctions reçoivent les nouvelles variables. Si tu veux déployer automatiquement les futures versions depuis GitHub, autoriser la liaison GitHub dans Vercel puis lier le dépôt en choisissant `prospects` comme répertoire racine.
 
 Configurer ces **variables d'environnement secrètes** dans Vercel (Production et Preview selon besoin) :
 
@@ -19,9 +28,15 @@ Configurer ces **variables d'environnement secrètes** dans Vercel (Production e
 | --- | --- |
 | `TURNSTILE_SITE_KEY` | Clé publique du widget Cloudflare Turnstile (visible depuis `/api/config`) |
 | `TURNSTILE_SECRET` | Secret Turnstile (ne jamais publier) |
+| `TURNSTILE_EXPECTED_HOSTNAME` | Nom d'hôte exact validé par Cloudflare, par exemple `france-clim-demandes-13.vercel.app` (sans `https://`) |
 | `RESEND_API_KEY` | Clé API Resend |
 | `LEAD_FROM_EMAIL` | Adresse d'expédition sous un domaine vérifié, par exemple `Demandes <demandes@domaine-verifie.fr>` |
 | `LEAD_TO_EMAIL` | Adresse privée du professionnel qui recevra les demandes |
+
+Dans Cloudflare Turnstile, autoriser le domaine réellement utilisé. Le captcha émet l'action `demande_rappel`, que le serveur valide **avec le hostname exact**. Les tests refusent les jetons d'autres sites.
+Le serveur refuse les demandes mal formées ou trop volumineuses, vérifie l'accord de rappel, et associe une clé d'idempotence à l'envoi e-mail pour limiter les doublons après un incident réseau.
+
+**Avant activation réelle**, compléter les mentions légales et l'identité/contact du responsable du traitement, fixer la durée de conservation des e-mails, et vérifier la conformité des sous-traitants RGPD. Une adresse d'envoi Resend doit relever d'un domaine vérifié.
 
 L'envoi utilise l'API transactionnelle Resend, pas une extraction de contacts de plateformes.
 Le formulaire affiche « bientôt disponible » si un secret manque.
