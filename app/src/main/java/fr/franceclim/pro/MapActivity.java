@@ -316,7 +316,6 @@ public class MapActivity extends Activity {
       +"\\nLeboncoin : "+(prefs.getBoolean("watch_lbc",true)?"choisi":"désactivé")
       +"\\nFacebook : "+(prefs.getBoolean("watch_fb",false)?"choisi":"désactivé")
       +"\\nAutres plateformes installées : "+platforms.size()
-      +"\\nBluesky : "+(prefs.getBoolean("watch_bluesky",true)?"actif":"désactivé")
       +"\\nMastodon : "+(prefs.getBoolean("watch_mastodon",true)?"actif":"désactivé")
       +"\\nRendement Leboncoin (alertes / dossiers / prioritaires) : "+
         sourceYield("leboncoin")
@@ -328,7 +327,6 @@ public class MapActivity extends Activity {
       +"\\nDernière source : "+source
       +"\\nDernier résultat : "+result
       +"\\nFlux RSS : "+prefs.getString("scan_status","Jamais analysés")
-      +"\\nBluesky : "+prefs.getString("bluesky_scan_status","Jamais analysé")
       +"\\nVeille Android en arrière-plan : "+prefs.getString("background_scan_summary","Pas encore de rapport")
       +"\\nDernière veille Android terminée : "+formatScanDate(prefs.getLong("background_scan_completed_at",0))
       +"\\nDernière erreur Android : "+prefs.getString("background_scan_error","Aucune enregistrée")
