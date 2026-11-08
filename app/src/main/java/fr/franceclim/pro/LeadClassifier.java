@@ -65,7 +65,8 @@ public final class LeadClassifier {
     boolean clim=any(norm,"clim","climatisation","climatiseur","clim réversible","clim reversible",
       "split","monosplit","multisplit","multi split","bi split","gainable","pac air air","pompe a chaleur air air","air conditionne","clim qui fuit");
     boolean eau=any(norm,"chauffe eau","chauffe-eau","cumulus","ballon d eau chaude",
-      "ballon eau chaude","ballon electrique","eau chaude","ballon thermodynamique","ballon ecs","chauffe bain");
+      "ballon eau chaude","ballon electrique","eau chaude","ballon thermodynamique","ballon ecs","chauffe bain",
+      "ballon d eau","ballon d eau chaude perce","plus d eau chaude sanitaire");
     if(!clim&&!eau) return new Result("AUTRE","Zone à vérifier","HORS_SUJET",
       "Aucun besoin lié à la climatisation ou au chauffe-eau détecté",0,false,false,false);
 
@@ -105,11 +106,17 @@ public final class LeadClassifier {
       "quelqu un connait","quelqu un connaitrait","quelqu un pour","qui pour","urgent plombier",
       "je voudrais installer","j aimerais installer","je veux remplacer","je souhaite remplacer",
       "je dois remplacer","devis pour","besoin d un artisan","a qui faire appel",
-      "recommandation d installateur","recommandation plombier");
+      "recommandation d installateur","recommandation plombier",
+      "un bon climaticien","bon climaticien","bon plombier","des avis sur un installateur",
+      "quel artisan","connaissez vous quelqu un","des recommandations","un contact pour",
+      "vous auriez un contact","besoin d aide pour");
     boolean specific=any(norm,"installation","installer","remplacer","remplacement",
-      "changer","pose de","pose d","poser","monter","devis","technicien","artisan","plombier","installateur","remise en service","remettre en marche");
+      "changer","pose de","pose d","poser","monter","devis","technicien","artisan","plombier","installateur","remise en service","remettre en marche",
+      "climaticien","frigoriste","societe","entreprise","changer mon","remplacer mon");
     boolean emergency=any(norm,"plus d eau chaude","panne","hs","perce","fuite",
-      "urgent","au plus vite","en urgence","ne fonctionne plus","ne chauffe plus","vient de lacher","en panne","plus de clim");
+      "urgent","au plus vite","en urgence","ne fonctionne plus","ne chauffe plus","vient de lacher",
+      "en panne","plus de clim","ne fait plus de froid","ne produit plus d eau chaude",
+      "ballon perce","cumulus perce","plus rien ne sort");
     boolean repairOnly=any(norm,"entretien annuel","recharge de gaz","nettoyage filtre",
       "nettoyage des filtres","je vends un","pieces detachees","reparation seulement",
       "recherche piece","recherche une piece");
