@@ -73,6 +73,10 @@ public final class RadarStore {
         if(signature.equals(item.optString("fingerprint")))
           return new AddResult(false,"Déjà détectée",analysis);
       }
+      // No silent eviction of unprocessed customer requests.
+      // Export and explicitly archive/delete dossiers before reaching the limit.
+      if(old.length()>=500)
+        return new AddResult(false,"Capacité CRM atteinte (500 dossiers). Sauvegarder puis archiver.",analysis);
       try {
         JSONObject item=new JSONObject();
         item.put("fingerprint",signature);
@@ -92,8 +96,7 @@ public final class RadarStore {
         item.put("appointment_at","");
         item.put("date",System.currentTimeMillis());
         JSONArray updated=new JSONArray();
-        int start=Math.max(0,old.length()-399);
-        for(int i=start;i<old.length();i++)updated.put(old.get(i));
+        for(int i=0;i<old.length();i++)updated.put(old.get(i));
         updated.put(item);
         SecureLeadStore.save(ctx,updated.toString());
         prefs(ctx).edit().putLong("last_match",System.currentTimeMillis()).apply();
