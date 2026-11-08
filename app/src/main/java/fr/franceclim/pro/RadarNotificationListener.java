@@ -70,11 +70,23 @@ public class RadarNotificationListener extends NotificationListenerService {
     // Journal de diagnostic minimal : aucun texte, contact ou nom de personne.
     android.content.SharedPreferences prefs=getSharedPreferences("franceclim",MODE_PRIVATE);
     int total=prefs.getInt("notification_checked",0);
+    // Métriques agrégées, aucun texte ni identifiant de personne.
+    String family="fr.leboncoin".equals(pkg)?"leboncoin":
+      "com.facebook.katana".equals(pkg)?"facebook":"autres";
+    String prefix="source_metrics_"+family+"_";
+    int examined=prefs.getInt(prefix+"examined",0);
+    int accepted=prefs.getInt(prefix+"accepted",0);
+    int priority=prefs.getInt(prefix+"priority",0);
+    boolean isPriority=added.added&&added.classification!=null&&
+      "PRIORITAIRE".equals(added.classification.status);
     prefs.edit()
       .putInt("notification_checked",Math.min(100000,total+1))
       .putLong("notification_last_at",System.currentTimeMillis())
       .putString("notification_last_source",source)
       .putString("notification_last_result",added.added?"Nouveau dossier":added.reason)
+      .putInt(prefix+"examined",Math.min(100000,examined+1))
+      .putInt(prefix+"accepted",Math.min(100000,accepted+(added.added?1:0)))
+      .putInt(prefix+"priority",Math.min(100000,priority+(isPriority?1:0)))
       .apply();
     if(!added.added||added.classification==null)return;
     // Alerts only for explicit requests in a known location; ambiguous matches stay in the inbox.
