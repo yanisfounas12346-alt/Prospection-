@@ -31,6 +31,7 @@ public final class BlueskyScanner {
 
   public static final class Report {
     public int searches, posts, candidates, added, errors;
+    public String failedQueries="";
     @Override public String toString(){
       return "Bluesky : "+searches+" recherches, "+posts+
         " publications, "+candidates+" demandes potentielles dans le 13, "+
@@ -51,7 +52,7 @@ public final class BlueskyScanner {
           "&sort=latest&lang=fr&limit=60";
         JSONObject result=new JSONObject(readHttps(url));
         JSONArray posts=result.optJSONArray("posts");
-        if(posts==null){report.errors++;continue;}
+        if(posts==null){report.errors++;report.failedQueries+=query+" (réponse invalide) ; ";continue;}
         Set<String> batch=new HashSet<>();
         for(int i=0;i<posts.length();i++){
           JSONObject post=posts.optJSONObject(i);
@@ -92,6 +93,7 @@ public final class BlueskyScanner {
         }
       }catch(Exception e){
         report.errors++;
+        report.failedQueries+=query+" ("+e.getClass().getSimpleName()+") ; ";
       }
     }
     prefs.edit().putBoolean("bluesky_initialized",true)
