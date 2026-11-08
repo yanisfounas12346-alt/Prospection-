@@ -34,28 +34,31 @@ small{color:#52676d}.status{padding:12px 0;min-height:28px;font-weight:600}.erro
 <script>
 (async()=>{
 const form=document.getElementById('lead'),status=document.getElementById('status'),button=document.getElementById('submit');
-let token='',enabled=false;
+let token='',enabled=false,requestId=null;
 function state(message,error=false){status.textContent=message;status.className='status '+(error?'error':'success')}
 try{
   const response=await fetch('/api/config',{cache:'no-store'});const config=await response.json();
   if(!config.enabled||!config.sitekey){state('Formulaire bientôt disponible. Le service de rappel n’est pas encore activé.',true);return}
   enabled=true;
   const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;
-  script.onload=()=>window.turnstile.render('#captcha',{sitekey:config.sitekey,callback:t=>{token=t;button.disabled=false},'expired-callback':()=>{token='';button.disabled=true}});
+  script.onload=()=>window.turnstile.render('#captcha',{sitekey:config.sitekey,action:'demande_rappel',callback:t=>{token=t;button.disabled=false},'expired-callback':()=>{token='';button.disabled=true},'error-callback':()=>{token='';button.disabled=true;state('Vérification anti-spam indisponible. Réessayez.',true)}});
   script.onerror=()=>state('Vérification anti-spam indisponible. Réessayez.',true);
   document.head.appendChild(script);
 }catch{state('Service temporairement indisponible. Réessayez plus tard.',true)}
+form.addEventListener('input',()=>{requestId=null;});
+form.addEventListener('change',()=>{requestId=null;});
 form.addEventListener('submit',async e=>{
 e.preventDefault();if(!enabled||!token||!form.reportValidity())return;
 button.disabled=true;state('Transmission de votre demande en cours…');
 const data=Object.fromEntries(new FormData(form).entries());
 data.rappel=document.getElementById('rappel').checked;data.captcha=token;
-data.id=crypto.randomUUID();
+requestId??=crypto.randomUUID();
+data.id=requestId;
 try{
 const response=await fetch('/api/demande',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
 const outcome=await response.json();
 if(!response.ok||!outcome.ok){state(outcome.error||'La demande n’a pas pu être transmise.',true);window.turnstile?.reset();token='';return}
-state(outcome.message);form.reset();window.turnstile?.reset();token='';
+state(outcome.message);form.reset();window.turnstile?.reset();token='';requestId=null;
 }catch{state('Échec réseau. Votre demande n’est pas confirmée.',true);window.turnstile?.reset();token=''}
 });
 })();
