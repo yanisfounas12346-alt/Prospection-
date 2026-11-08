@@ -45,6 +45,18 @@ public final class ClassifierSmoke {
       "Mon ballon d'eau chaude est percé à Marignane, je cherche un plombier.", "");
     expect(breakdown.eligible&&breakdown.urgent,
       "panne ballon eau chaude Marignane");
+    LeadClassifier.Result news=LeadClassifier.classify(
+      "Dans cet article, nous expliquons comment installer une climatisation à Marseille.", "");
+    expect(!"PRIORITAIRE".equals(news.status),"article de blog non prioritaire");
+    LeadClassifier.Result vague=LeadClassifier.classify(
+      "Je cherche des infos sur le prix d'une installation de climatisation à Vitrolles.", "");
+    expect(!"PRIORITAIRE".equals(vague.status),"question tarifaire sans demande de devis");
+    LeadClassifier.Result trade=LeadClassifier.classify(
+      "Je suis climaticien à Aubagne et je cherche un artisan pour mon équipe de climatisation.", "");
+    expect(!"PRIORITAIRE".equals(trade.status),"recrutement / professionnel non prioritaire");
+    LeadClassifier.Result quote=LeadClassifier.classify(
+      "Je cherche un artisan pour installer une clim à Salon-de-Provence, besoin d'un devis.", "");
+    expect("PRIORITAIRE".equals(quote.status),"vraie demande de devis prioritaire");
     System.out.println("OK: "+pass+" tests de qualification.");
   }
 }
