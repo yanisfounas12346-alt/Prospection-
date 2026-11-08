@@ -31,6 +31,7 @@ public final class RadarScanner {
   private RadarScanner(){}
   public static final class Report {
     public int feeds, checked, added, errors;
+    public String failedSources="";
     @Override public String toString() {return feeds+" source(s), "+checked+" publication(s), "+added+
       " opportunité(s), "+errors+" erreur(s)";}
   }
@@ -62,7 +63,7 @@ public final class RadarScanner {
       if(feed.isEmpty()||feed.startsWith("#"))continue;
       if(++attempted>20)break;
       report.feeds++;
-      if(!feed.startsWith("https://")){report.errors++;continue;}
+      if(!feed.startsWith("https://")){report.errors++;report.failedSources+="Adresse RSS invalide ; ";continue;}
       try {
         String xml=download(feed);
         XmlPullParser p=XmlPullParserFactory.newInstance().newPullParser();
@@ -91,6 +92,11 @@ public final class RadarScanner {
         }
       } catch(Exception e){
         report.errors++;
+        // Ne jamais inclure de jetons, chemins ou paramètres de flux privés.
+        String host="Source RSS";
+        try{String parsed=new URL(feed).getHost();if(parsed!=null&&!parsed.isEmpty())host=parsed;}
+        catch(Exception ignored){}
+        report.failedSources+=host+" ("+e.getClass().getSimpleName()+") ; ";
       }
     }
     // Pas de données personnelles publiées sur GitHub ; stockage uniquement sur ce téléphone.
