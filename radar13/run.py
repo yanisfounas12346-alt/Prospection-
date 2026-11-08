@@ -126,6 +126,12 @@ def save_state(data):
                           encoding="utf-8")
 
 
+def needs_alert(item):
+    """Qualified local request awaiting a usable notification channel."""
+    result = classify(item["text"])
+    return bool(result and result["score"] >= 65)
+
+
 def alert(item, source):
     """Une notification au propriétaire via un modèle WhatsApp approuvé."""
     result = classify(item["text"])
@@ -156,11 +162,19 @@ def scan_feeds(state):
             ident = fingerprint(item["id"] or item["text"])
             if ident in seen:
                 continue
-            # Initialisation prudente : les posts historiques ne sont pas envoyés.
-            if not first and reported < 12:
-                if alert(item, source):
+            # Only acknowledge qualified requests after successful delivery.
+            # Otherwise keep the fingerprint pending while the source still holds
+            # the post, including when WhatsApp is not configured.
+            qualified = needs_alert(item)
+            acknowledged = not qualified
+            if qualified and first:
+                acknowledged = whatsapp_configured()  # initial sync is intentionally silent
+            elif qualified and reported < 12:
+                acknowledged = alert(item, source)
+                if acknowledged:
                     reported += 1
-            seen.add(ident)
+            if acknowledged:
+                seen.add(ident)
             fresh += 1
         state["feeds"][key] = sorted(seen)[-4000:]
         print(f"{source} : {len(items)} publication(s) lues")
@@ -183,9 +197,16 @@ def scan_bluesky(state):
             key = fingerprint(item["id"])
             if key in seen:
                 continue
-            if not first and sent < 10 and alert(item, "Bluesky public"):
-                sent += 1
-            seen.add(key)
+            qualified = needs_alert(item)
+            acknowledged = not qualified
+            if qualified and first:
+                acknowledged = whatsapp_configured()  # initial sync is intentionally silent
+            elif qualified and sent < 10:
+                acknowledged = alert(item, "Bluesky public")
+                if acknowledged:
+                    sent += 1
+            if acknowledged:
+                seen.add(key)
             fresh += 1
         print(f"Bluesky / {term} : {len(posts)} publications publiques analysées")
     state["bluesky"] = sorted(seen)[-4000:]
@@ -223,10 +244,13 @@ def alert_mailbox():
             link_match = re.search(r"https://\S+", text)
             url = public_link(link_match.group(0)) if link_match else ""
             item = {"id": fingerprint(subject + text), "text": text, "link": url}
-            if alert(item, "Alerte e-mail officielle"):
+            qualified = needs_alert(item)
+            delivered = alert(item, "Alerte e-mail officielle") if qualified else False
+            if delivered:
                 result += 1
-            # Marquer lu seulement après traitement dans le dossier dédié.
-            client.store(uid, "+FLAGS", r"\Seen")
+            # Never mark a qualifying customer request as read if not delivered.
+            if not qualified or delivered:
+                client.store(uid, "+FLAGS", r"\Seen")
     return result
 
 
@@ -249,8 +273,8 @@ def main():
     if args.demo:
         return demo()
     # La veille ne dépend pas de la configuration d'un canal d'alerte.
-    # Sans WhatsApp, les sources sont tout de même analysées et les empreintes
-    # anti-doublons mises à jour ; aucun message n'est envoyé.
+    # Sans WhatsApp, les sources sont analysées ; les empreintes des demandes
+    # qualifiées non livrées restent à traiter pour une reprise ultérieure.
     if not whatsapp_configured():
         print("WhatsApp non configuré : veille active, sans notifications WhatsApp.")
     state = load_state()
