@@ -28,6 +28,7 @@ Configurer ces **variables d'environnement secrètes** dans Vercel (Production e
 | --- | --- |
 | `TURNSTILE_SITE_KEY` | Clé publique du widget Cloudflare Turnstile (visible depuis `/api/config`) |
 | `TURNSTILE_SECRET` | Secret Turnstile (ne jamais publier) |
+| `TURNSTILE_EXPECTED_HOSTNAME` | Nom d'hôte exact sur lequel le formulaire est utilisé, sans `https://`, par exemple `france-clim-demandes-13.vercel.app` ; configurez également cet hôte comme autorisé dans Turnstile. |
 | `TURNSTILE_EXPECTED_HOSTNAME` | Nom d'hôte exact validé par Cloudflare, par exemple `france-clim-demandes-13.vercel.app` (sans `https://`) |
 | `RESEND_API_KEY` | Clé API Resend |
 | `LEAD_FROM_EMAIL` | Adresse d'expédition sous un domaine vérifié, par exemple `Demandes <demandes@domaine-verifie.fr>` |
@@ -40,6 +41,17 @@ Le serveur refuse les demandes mal formées ou trop volumineuses, vérifie l'acc
 
 L'envoi utilise l'API transactionnelle Resend, pas une extraction de contacts de plateformes.
 Le formulaire affiche « bientôt disponible » si un secret manque.
+
+## État du déploiement Vercel (8 novembre 2026)
+
+Un projet de production `france-clim-demandes-13` a été créé :
+`https://france-clim-demandes-13.vercel.app`.
+
+Au dernier contrôle, le déploiement était **READY** mais **aucune variable d'environnement** n'était configurée : le formulaire est donc volontairement désactivé. Le statut READY indique seulement que les fichiers sont déployés, pas que les prospects peuvent déjà envoyer leurs demandes.
+
+Pour activer la réception : dans Vercel, ouvrir **france-clim-demandes-13 → Settings → Environment Variables**, ajouter les six variables ci-dessus à l'environnement **Production** et redéployer le projet. Les cinq valeurs privées restent exclusivement dans Vercel, jamais dans GitHub. `TURNSTILE_SITE_KEY` est la seule valeur publique. Configurer Turnstile pour le nom d'hôte final, y compris si vous basculez vers un domaine personnalisé.
+
+Vérifier ensuite `https://france-clim-demandes-13.vercel.app/api/config` : `enabled` doit être `true` avant les essais, sans jamais y exposer de clé privée. Le formulaire doit recevoir un essai autorisé avec un numéro de test et un e-mail confirmé avant diffusion. **Ne jamais publier de demandes nominatives ou de téléphones dans le dépôt public.**
 
 ## Test réel avant diffusion
 1. Vérifier Turnstile sur le **vrai domaine** utilisé, y compris le domaine Vercel si nécessaire.
