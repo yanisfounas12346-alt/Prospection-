@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="index,follow"><meta name="description" content="Demandez un rappel pour l'installation de climatisation ou le remplacement d'un chauffe-eau dans les Bouches-du-Rhône.">
+<title>Demander un rappel — Climatisation et chauffe-eau dans le 13</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#edf5f4;color:#12323b;font:16px/1.5 system-ui,Arial,sans-serif}
+main{max-width:710px;margin:30px auto;padding:28px;background:#fff;border-radius:18px;box-shadow:0 8px 30px #1233}
+h1{font-size:clamp(24px,4vw,35px);line-height:1.2}p{color:#46636d}label{display:block;margin:14px 0 5px;font-weight:650}
+input,select,textarea{font:inherit;width:100%;padding:12px;border:1px solid #95b3b5;border-radius:9px;background:#fff}
+textarea{min-height:118px}button{font:inherit;background:#00796e;border:0;color:white;border-radius:10px;padding:13px 20px;font-weight:700;cursor:pointer;width:100%;margin-top:16px}button:disabled{opacity:.55;cursor:not-allowed}
+.check{display:flex;gap:10px;align-items:flex-start;margin-top:18px}.check input{width:auto;margin-top:6px}
+small{color:#52676d}.status{padding:12px 0;min-height:28px;font-weight:600}.error{color:#a12626}.success{color:#07684f}
+</style></head><body>
+<main>
+<p><strong>FRANCE CLIM — Bouches-du-Rhône (13)</strong></p>
+<h1>Climatisation ou chauffe-eau : demandez un rappel</h1>
+<p>Décrivez votre projet ou votre panne. Si votre commune est dans le 13, votre demande sera transmise à l'entreprise pour une réponse sur les travaux demandés. Aucun engagement de votre part.</p>
+<form id="lead">
+<label for="service">Votre besoin</label><select id="service" name="service" required>
+<option value="">Choisir</option><option value="climatisation">Installation / remplacement de climatisation</option>
+<option value="chauffe-eau">Installation / remplacement de chauffe-eau</option></select>
+<label for="nom">Nom</label><input id="nom" name="nom" autocomplete="name" maxlength="80" required>
+<label for="telephone">Téléphone</label><input id="telephone" name="telephone" type="tel" autocomplete="tel" placeholder="06 12 34 56 78" required>
+<label for="codePostal">Code postal (13xxx)</label><input id="codePostal" name="codePostal" inputmode="numeric" pattern="13[0-9]{3}" maxlength="5" required>
+<label for="ville">Commune</label><input id="ville" name="ville" autocomplete="address-level2" maxlength="80" required>
+<label for="besoin">Décrivez les travaux ou la panne</label><textarea id="besoin" name="besoin" minlength="15" maxlength="1200" required></textarea>
+<div style="position:absolute;left:-9999px" aria-hidden="true"><label>Site internet<input name="site_web" tabindex="-1" autocomplete="off"></label></div>
+<label class="check"><input id="rappel" type="checkbox" name="rappel" required><span>Je demande expressément à être rappelé(e) au numéro indiqué au sujet de ces travaux. Cette demande n'autorise pas d'autres sollicitations commerciales.</span></label>
+<p><small>Vos coordonnées sont utilisées pour répondre à cette demande de rappel. Elles sont transmises au prestataire d'e-mail chargé de l'acheminement vers l'entreprise. Ne communiquez aucune information bancaire ni médicale.</small></p>
+<div id="captcha"></div>
+<button id="submit" disabled>Demander à être rappelé(e)</button>
+<div class="status" id="status" role="status" aria-live="polite"></div>
+</form></main>
+<script>
+(async()=>{
+const form=document.getElementById('lead'),status=document.getElementById('status'),button=document.getElementById('submit');
+let token='',enabled=false;
+function state(message,error=false){status.textContent=message;status.className='status '+(error?'error':'success')}
+try{
+  const response=await fetch('/api/config',{cache:'no-store'});const config=await response.json();
+  if(!config.enabled||!config.sitekey){state('Formulaire bientôt disponible. Le service de rappel n’est pas encore activé.',true);return}
+  enabled=true;
+  const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;
+  script.onload=()=>window.turnstile.render('#captcha',{sitekey:config.sitekey,callback:t=>{token=t;button.disabled=false},'expired-callback':()=>{token='';button.disabled=true}});
+  script.onerror=()=>state('Vérification anti-spam indisponible. Réessayez.',true);
+  document.head.appendChild(script);
+}catch{state('Service temporairement indisponible. Réessayez plus tard.',true)}
+form.addEventListener('submit',async e=>{
+e.preventDefault();if(!enabled||!token||!form.reportValidity())return;
+button.disabled=true;state('Transmission de votre demande en cours…');
+const data=Object.fromEntries(new FormData(form).entries());
+data.rappel=form.rappel.checked;data.captcha=token;
+data.id=crypto.randomUUID();
+try{
+const response=await fetch('/api/demande',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+const outcome=await response.json();
+if(!response.ok||!outcome.ok){state(outcome.error||'La demande n’a pas pu être transmise.',true);window.turnstile?.reset();token='';return}
+state(outcome.message);form.reset();window.turnstile?.reset();token='';
+}catch{state('Échec réseau. Votre demande n’est pas confirmée.',true);window.turnstile?.reset();token=''}
+});
+})();
+</script></body></html>
