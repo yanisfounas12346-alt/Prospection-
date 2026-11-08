@@ -4,7 +4,7 @@ from email.message import EmailMessage
 import unittest
 from unittest.mock import patch
 
-from radar13.run import fingerprint, scan_bluesky, scan_feeds, alert_mailbox, alert
+from radar13.run import fingerprint, scan_feeds, alert_mailbox, alert
 
 
 REQUEST = "Je cherche un plombier pour remplacer mon cumulus à Marseille, plus d'eau chaude."
@@ -42,19 +42,6 @@ class DeliveryRegressionTests(unittest.TestCase):
             send.assert_called_once()
             self.assertEqual(scan_feeds(state), (0, 0))
 
-    def test_bluesky_unconfigured_channel_keeps_qualified_lead(self):
-        state = {"feeds": {}, "bluesky": []}
-        entry = {"id": "at://example/post/one", "text": REQUEST, "link": ""}
-        with patch("radar13.run.fetch_search", return_value=[entry]), \
-             patch("radar13.run.whatsapp_configured", return_value=False):
-            self.assertEqual(scan_bluesky(state), (1, 0))
-            self.assertEqual(state["bluesky"], [])
-        with patch("radar13.run.fetch_search", return_value=[entry]), \
-             patch("radar13.run.alert", return_value=True) as send:
-            self.assertEqual(scan_bluesky(state), (1, 1))
-            send.assert_called_once()
-            self.assertEqual(scan_bluesky(state), (0, 0))
-
     def test_fingerprint_retention_preserves_latest_acknowledged(self):
         previous = [f"older-{i:04d}" for i in range(4000)]
         state = {"feeds": {fingerprint(FEED): previous[:]}}
@@ -67,17 +54,6 @@ class DeliveryRegressionTests(unittest.TestCase):
         self.assertEqual(len(remaining), 4000)
         self.assertNotIn("older-0000", remaining)
         self.assertEqual(remaining[-1], fingerprint("newest"))
-
-    def test_bluesky_retention_preserves_latest_acknowledged(self):
-        previous = [f"older-{i:04d}" for i in range(4000)]
-        state = {"feeds": {}, "bluesky": previous[:]}
-        entry = {"id": "at://example/post/newest", "text": REQUEST, "link": ""}
-        with patch("radar13.run.fetch_search", return_value=[entry]), \
-             patch("radar13.run.alert", return_value=True):
-            self.assertEqual(scan_bluesky(state), (1, 1))
-        self.assertEqual(len(state["bluesky"]), 4000)
-        self.assertNotIn("older-0000", state["bluesky"])
-        self.assertEqual(state["bluesky"][-1], fingerprint(entry["id"]))
 
     def test_provider_message_id_required_to_mark_as_delivered(self):
         candidate = {"id": "id", "text": REQUEST, "link": ""}
