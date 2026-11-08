@@ -40,6 +40,30 @@ class DeliveryRegressionTests(unittest.TestCase):
             send.assert_called_once()
             self.assertEqual(scan_bluesky(state), (0, 0))
 
+    def test_fingerprint_retention_preserves_latest_acknowledged(self):
+        previous = [f"older-{i:04d}" for i in range(4000)]
+        state = {"feeds": {fingerprint(FEED): previous[:]}}
+        entry = {"id": "newest", "text": REQUEST, "title": "", "link": ""}
+        with patch("radar13.run.load_feeds", return_value=[("Flux test", FEED)]), \
+             patch("radar13.run.fetch_feed", return_value=[entry]), \
+             patch("radar13.run.alert", return_value=True):
+            self.assertEqual(scan_feeds(state), (1, 1))
+        remaining = state["feeds"][fingerprint(FEED)]
+        self.assertEqual(len(remaining), 4000)
+        self.assertNotIn("older-0000", remaining)
+        self.assertEqual(remaining[-1], fingerprint("newest"))
+
+    def test_bluesky_retention_preserves_latest_acknowledged(self):
+        previous = [f"older-{i:04d}" for i in range(4000)]
+        state = {"feeds": {}, "bluesky": previous[:]}
+        entry = {"id": "at://example/post/newest", "text": REQUEST, "link": ""}
+        with patch("radar13.run.fetch_search", return_value=[entry]), \
+             patch("radar13.run.alert", return_value=True):
+            self.assertEqual(scan_bluesky(state), (1, 1))
+        self.assertEqual(len(state["bluesky"]), 4000)
+        self.assertNotIn("older-0000", state["bluesky"])
+        self.assertEqual(state["bluesky"][-1], fingerprint(entry["id"]))
+
     def test_provider_message_id_required_to_mark_as_delivered(self):
         candidate = {"id": "id", "text": REQUEST, "link": ""}
         with patch("radar13.run.whatsapp_configured", return_value=True), \
