@@ -140,8 +140,9 @@ def alert(item, source):
     # Par confidentialité, on ne transmet ni nom, ni numéro, ni texte brut.
     if not whatsapp_configured():
         return False
-    send_template(result["category"], result["city"], result["score"], source)
-    return True
+    # A 2xx response without a WhatsApp message ID is not proof of delivery.
+    message_id = send_template(result["category"], result["city"], result["score"], source)
+    return bool(message_id)
 
 
 def scan_feeds(state):
