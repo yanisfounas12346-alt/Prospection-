@@ -35,6 +35,14 @@ public final class ClassifierSmoke {
       "le filtre RSS accepte les memes demandes locales que le CRM");
     expect(RadarClassifier.analyse("Recherche installation de climatisation à Lille.")==null,
       "le flux public hors zone reste écarté");
+    LeadClassifier.Result referral=LeadClassifier.classify(
+      "Vous auriez un contact pour un bon climaticien à Vitrolles ?", "");
+    expect(referral.eligible&&referral.geoKnown&&"PRIORITAIRE".equals(referral.status),
+      "recommandation indirecte climaticien Vitrolles");
+    LeadClassifier.Result breakdown=LeadClassifier.classify(
+      "Mon ballon d'eau chaude est percé à Marignane, je cherche un plombier.", "");
+    expect(breakdown.eligible&&breakdown.urgent,
+      "panne ballon eau chaude Marignane");
     System.out.println("OK: "+pass+" tests de qualification.");
   }
 }
