@@ -85,6 +85,9 @@ public final class BlueskyScanner {
               alert.put("score",added.classification.score);
               RadarScanner.notifyLead(app,alert);
             }
+          }else if(!"Déjà détectée".equals(added.reason)){
+            // Storage errors must be visible; the next scan can retry the post.
+            report.errors++;
           }
         }
       }catch(Exception e){
