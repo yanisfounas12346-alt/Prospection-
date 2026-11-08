@@ -27,6 +27,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Tester le formulaire de demandes entrantes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          node --version
+          cd prospects
+          node --test tests/*.test.mjs
+
       - name: Tester le filtrage local des opportunites
         shell: bash
         run: |
