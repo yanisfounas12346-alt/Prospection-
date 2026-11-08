@@ -15,8 +15,9 @@ public final class RadarStore {
   private static final String PREF="franceclim";
   private static SharedPreferences prefs(Context c){return c.getSharedPreferences(PREF,Context.MODE_PRIVATE);}
   public static JSONArray leads(Context c){
-    synchronized(LOCK) {
-      try{return new JSONArray(prefs(c).getString("leads","[]"));}catch(Exception e){return new JSONArray();}
+    synchronized(LOCK){
+      try{return new JSONArray(SecureLeadStore.read(c));}
+      catch(org.json.JSONException e){throw new IllegalStateException("Dossiers clients invalides",e);}
     }
   }
   private static String hash(String input){
@@ -41,6 +42,11 @@ public final class RadarStore {
     }
   }
   public static AddResult add(Context ctx,String raw,String cityHint,String source) {
+    return addWithIdentity(ctx,raw,cityHint,source,"");
+  }
+  /** The identity is hashed into the fingerprint, never added to the public map. */
+  public static AddResult addWithIdentity(Context ctx,String raw,String cityHint,
+    String source,String identity) {
     if(raw==null||raw.trim().isEmpty())return new AddResult(false,"Contenu vide",null);
     String clipped=raw.length()>1800?raw.substring(0,1800):raw;
     LeadClassifier.Result analysis=LeadClassifier.classify(clipped,cityHint);
@@ -49,12 +55,17 @@ public final class RadarStore {
       JSONArray old=leads(ctx);
       String link=extractUrl(clipped);
       // Use URL when present, otherwise stable normalized content. No person name needed.
-      String signature=hash(link.isEmpty()?LeadClassifier.normalize(clipped):link.trim().toLowerCase());
+      String canonical=link.isEmpty()
+        ?LeadClassifier.normalize(clipped)+"|"+LeadClassifier.normalize(cityHint)
+        :link.trim().toLowerCase(java.util.Locale.ROOT);
+      // Separate legitimate form submissions with identical descriptions.
+      if(identity!=null&&!identity.trim().isEmpty())
+        canonical+="|"+LeadClassifier.normalize(identity);
+      String signature=hash(canonical);
       for(int k=0;k<old.length();k++){
         JSONObject item=old.optJSONObject(k);
         if(item==null)continue;
-        if(signature.equals(item.optString("fingerprint")) ||
-           clipped.equalsIgnoreCase(item.optString("detail")))
+        if(signature.equals(item.optString("fingerprint")))
           return new AddResult(false,"Déjà détectée",analysis);
       }
       try {
@@ -79,8 +90,8 @@ public final class RadarStore {
         int start=Math.max(0,old.length()-399);
         for(int i=start;i<old.length();i++)updated.put(old.get(i));
         updated.put(item);
-        prefs(ctx).edit().putString("leads",updated.toString())
-          .putLong("last_match",System.currentTimeMillis()).apply();
+        SecureLeadStore.save(ctx,updated.toString());
+        prefs(ctx).edit().putLong("last_match",System.currentTimeMillis()).apply();
         return new AddResult(true,"Ajoutée au radar",analysis);
       }catch(Exception e){return new AddResult(false,"Erreur de stockage",analysis);}
     }
@@ -102,7 +113,7 @@ public final class RadarStore {
       try {
         if("Visite effectuée".equals(stage))item.put("visited",true);
         item.put("status",stage);
-        prefs(c).edit().putString("leads",a.toString()).apply();
+        SecureLeadStore.save(c,a.toString());
         return true;
       }catch(Exception e){return false;}
     }
@@ -116,7 +127,7 @@ public final class RadarStore {
       try{
         item.put("appointment_at",when.trim());
         item.put("status","RDV confirmé");
-        prefs(c).edit().putString("leads",a.toString()).apply();
+        SecureLeadStore.save(c,a.toString());
         return true;
       }catch(Exception e){return false;}
     }
@@ -149,7 +160,7 @@ public final class RadarStore {
         item.put("callbackRequested",requestedCallback);
         item.put("callbackEvidence",requestedCallback?safeEvidence:"");
         item.put("callbackAt",requestedCallback?System.currentTimeMillis():0);
-        prefs(c).edit().putString("leads",leads.toString()).apply();
+        SecureLeadStore.save(c,leads.toString());
         return true;
       }catch(Exception ex){return false;}
     }
@@ -165,7 +176,7 @@ public final class RadarStore {
         return false;
     }
     synchronized(LOCK){
-      prefs(c).edit().putString("leads",replacement.toString()).apply();
+      SecureLeadStore.save(c,replacement.toString());
     }
     return true;
   }
@@ -181,13 +192,13 @@ public final class RadarStore {
         JSONObject item=before.optJSONObject(i);
         if(item!=null)after.put(item);
       }
-      prefs(c).edit().putString("leads",after.toString()).apply();
+      SecureLeadStore.save(c,after.toString());
       return true;
     }
   }
 
   public static void clear(Context c){
-    synchronized(LOCK){prefs(c).edit().remove("leads").remove("last_match").apply();}
+    synchronized(LOCK){SecureLeadStore.clear(c);prefs(c).edit().remove("last_match").apply();}
   }
   /** Notifications d'applications de demandes de travaux choisies explicitement. */
   public static boolean enabled(Context c,String pkg){
