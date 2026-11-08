@@ -18,13 +18,13 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 .brand small{display:block;color:#577180;font-size:11px;margin-top:2px}
 .brandRight{display:flex;align-items:center;gap:7px;flex:none}
 .sourcesBtn{border:1px solid #c7dbde;border-radius:11px;background:#f2f9f8;color:#006a65;padding:7px 9px;font-size:12px;font-weight:800}
-.counter{background:#e7f7f3;color:#07574e;border-radius:12px;padding:5px 8px;font-weight:800;font-size:12px;white-space:nowrap}
+.counter{background:#e7f7f3;color:#07574e;border-radius:12px;padding:5px 8px;font-weight:800;font-size:11px;max-width:125px;text-align:center}
 .searchrow{display:flex;gap:7px}.searchrow input{min-width:0;flex:1;border:1px solid #cddde2;border-radius:11px;background:#f5f9fb;padding:10px 11px;color:var(--ink);outline-offset:1px}
 .smallbutton{border:0;border-radius:10px;background:var(--navy);color:#fff;min-width:41px;padding:9px 10px;font-size:18px}
 .filters{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}.filters::-webkit-scrollbar{display:none}
 .filter{border:1px solid #d4e2e6;background:#f7fafb;padding:7px 11px;border-radius:22px;font-weight:700;font-size:12px;white-space:nowrap;color:#355366}
 .filter.active{border-color:#006f68;background:#007d75;color:#fff}
-#notice{position:absolute;z-index:1000;top:167px;left:12px;right:12px;margin:auto;max-width:570px;background:#fff;box-shadow:0 1px 10px #1232;border-radius:12px;padding:8px 12px;color:#2c5362;font-size:12px;pointer-events:none;text-align:center}
+#notice{position:absolute;z-index:1000;top:200px;left:12px;right:12px;margin:auto;max-width:570px;background:#fff;box-shadow:0 1px 10px #1232;border-radius:12px;padding:8px 12px;color:#2c5362;font-size:12px;pointer-events:none;text-align:center}
 #notice:empty{display:none}
 .mapactions{position:absolute;z-index:1050;right:14px;bottom:55px;display:flex;flex-direction:column;gap:9px}
 .action{border:0;background:white;color:var(--ink);min-width:48px;min-height:48px;padding:0 12px;border-radius:15px;box-shadow:var(--shadow);font-size:19px;font-weight:800}
@@ -77,7 +77,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
-  let pins=[],unlocated=[],mode='all',term='',map=null,markers=null,first=true,focused=null,loading=false,scanStatus='';
+  let pins=[],unlocated=[],mode='all',term='',map=null,markers=null,first=true,focused=null,loading=false,scanStatus='',callableCount=0;
   const all=()=>pins.flatMap(p=>Array.isArray(p.opportunities)?p.opportunities:[]).concat(unlocated);
   const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const matches=o=>{
@@ -88,6 +88,8 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     return !q||[type,city,norm(o.source),norm(o.summary)].some(x=>x.includes(q));
   };
   const filtered=()=>all().filter(matches);
+  function positionNotice(){const h=document.querySelector('.header');if(h)$('notice').style.top=Math.ceil(h.getBoundingClientRect().bottom+9)+'px';}
+  window.addEventListener('resize',positionNotice);
   function node(tag,cls,value){
     const e=document.createElement(tag);
     if(cls)e.className=cls;
@@ -150,7 +152,9 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   }
   function draw(autoFit){
     const entries=filtered();
-    $('counter').textContent=entries.length+(entries.length>1?' pistes':' piste');
+    positionNotice();
+    $('counter').textContent=entries.length+(entries.length>1?' pistes':' piste')+' · '+callableCount+' rappel(s)';
+    $('counter').title=callableCount+' fiche(s) avec numéro et demande de rappel documentée sur le téléphone';
     $('list').title='Voir '+entries.length+' opportunités';
     const geolocated=entries.filter(o=>o.geo!==false).length;
     $('notice').textContent=loading?'Recherche des sources en cours…':(scanStatus||(entries.length?geolocated+' dossier(s) placés · position approximative des communes':''));
@@ -175,6 +179,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   }
   window.renderRadar=function(payload){
     if(Array.isArray(payload))payload={pins:payload,unlocated:[]};
+    callableCount=Math.max(0,Number(payload&&payload.callableCount)||0);
     pins=Array.isArray(payload&&payload.pins)?payload.pins:[];
     unlocated=Array.isArray(payload&&payload.unlocated)?payload.unlocated:[];
     for(const p of pins){
@@ -197,7 +202,6 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     loading=Boolean(value);$('refresh').disabled=loading;draw(false);
   };
   window.setRadarStatus=function(message){
-    loading=false;$('refresh').disabled=false;
     scanStatus=String(message||'');
     draw(false);
   };
