@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://france-clim-demandes-13.vercel.app/sitemap.xml
