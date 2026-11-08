@@ -77,7 +77,9 @@ Les étapes commerciales imposent **visite technique gratuite effectuée avant d
 
 Ne conserver les coordonnées que pour la finalité annoncée et supprimer les dossiers devenus inutiles. L'APK permet de **supprimer individuellement un dossier** et de **sauvegarder/restaurer** ses données via un fichier JSON local.
 
-Le fichier de sauvegarde contient des données personnelles en clair. Le conserver **dans un espace privé**, jamais dans un dépôt GitHub public, un canal WhatsApp collectif ou un service non autorisé.
+Depuis la version Android 2.6, les dossiers locaux sont chiffrés en AES-GCM avec une clé Android Keystore. La migration des anciennes données locales ne supprime la version non chiffrée qu'après une écriture chiffrée réussie. Tester la mise à jour sur un appareil réel, et sauvegarder les dossiers avant de changer de signature APK.
+
+Le fichier de sauvegarde JSON exporté contient toujours des données personnelles **en clair**. Le conserver **dans un espace privé**, jamais dans un dépôt GitHub public, un canal WhatsApp collectif ou un service non autorisé. Le serveur GitHub de veille n'enregistre pas les noms et numéros des clients et ne synchronise pas les dossiers vers l'APK.
 
 ### Rappel réglementaire France 2026
 
