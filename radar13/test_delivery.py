@@ -4,7 +4,7 @@ from email.message import EmailMessage
 import unittest
 from unittest.mock import patch
 
-from radar13.run import fingerprint, scan_bluesky, scan_feeds, alert_mailbox
+from radar13.run import fingerprint, scan_bluesky, scan_feeds, alert_mailbox, alert
 
 
 REQUEST = "Je cherche un plombier pour remplacer mon cumulus à Marseille, plus d'eau chaude."
@@ -39,6 +39,28 @@ class DeliveryRegressionTests(unittest.TestCase):
             self.assertEqual(scan_bluesky(state), (1, 1))
             send.assert_called_once()
             self.assertEqual(scan_bluesky(state), (0, 0))
+
+    def test_provider_message_id_required_to_mark_as_delivered(self):
+        candidate = {"id": "id", "text": REQUEST, "link": ""}
+        with patch("radar13.run.whatsapp_configured", return_value=True), \
+             patch("radar13.run.send_template", return_value=None):
+            self.assertFalse(alert(candidate, "Source autorisée"))
+        with patch("radar13.run.whatsapp_configured", return_value=True), \
+             patch("radar13.run.send_template", return_value="wamid.test-id"):
+            self.assertTrue(alert(candidate, "Source autorisée"))
+
+    def test_failed_delivery_can_be_retried(self):
+        state = {"feeds": {fingerprint(FEED): []}}
+        entry = {"id": "post-fail", "text": REQUEST, "title": "", "link": ""}
+        with patch("radar13.run.load_feeds", return_value=[("Flux test", FEED)]), \
+             patch("radar13.run.fetch_feed", return_value=[entry]), \
+             patch("radar13.run.alert", return_value=False):
+            self.assertEqual(scan_feeds(state), (1, 0))
+            self.assertEqual(state["feeds"][fingerprint(FEED)], [])
+        with patch("radar13.run.load_feeds", return_value=[("Flux test", FEED)]), \
+             patch("radar13.run.fetch_feed", return_value=[entry]), \
+             patch("radar13.run.alert", return_value=True):
+            self.assertEqual(scan_feeds(state), (1, 1))
 
     def test_mailbox_keeps_undelivered_lead_unread(self):
         msg = EmailMessage()
