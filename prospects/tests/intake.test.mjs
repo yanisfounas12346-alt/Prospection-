@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateLead, emailText } from '../api/_validate.mjs';
+import { validateLead, emailText } from '../lib/validate.mjs';
 import requestHandler from '../api/demande.mjs';
 import configHandler from '../api/config.mjs';
 
