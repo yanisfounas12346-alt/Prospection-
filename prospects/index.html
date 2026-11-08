@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="robots" content="index,follow"><meta name="description" content="Demandez un rappel pour l'installation de climatisation ou le remplacement d'un chauffe-eau dans les Bouches-du-Rhône.">
+<meta name="robots" content="index,follow"><link rel="canonical" href="https://france-clim-demandes-13.vercel.app/"><meta name="description" content="Demandez un rappel pour l'installation de climatisation ou le remplacement d'un chauffe-eau dans les Bouches-du-Rhône.">
 <title>Demander un rappel — Climatisation et chauffe-eau dans le 13</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#edf5f4;color:#12323b;font:16px/1.5 system-ui,Arial,sans-serif}
@@ -14,6 +14,8 @@ small{color:#52676d}.status{padding:12px 0;min-height:28px;font-weight:600}.erro
 <main>
 <p><strong>FRANCE CLIM — Bouches-du-Rhône (13)</strong></p>
 <h1>Climatisation ou chauffe-eau : demandez un rappel</h1>
+<p>Un projet d'installation de climatisation ? Un chauffe-eau à remplacer ? Décrivez votre besoin dans les Bouches-du-Rhône pour demander à être contacté au sujet de vos travaux.</p>
+<nav aria-label="Informations par type de travaux"><a href="/climatisation/">Projet de climatisation</a> · <a href="/chauffe-eau/">Remplacement de chauffe-eau</a> · <a href="/panne-eau-chaude/">Panne d'eau chaude</a></nav>
 <p>Décrivez votre projet ou votre panne. Si votre commune est dans le 13, votre demande sera transmise à l'entreprise pour une réponse sur les travaux demandés. Aucun engagement de votre part.</p>
 <form id="lead">
 <label for="service">Votre besoin</label><select id="service" name="service" required>
@@ -35,6 +37,12 @@ small{color:#52676d}.status{padding:12px 0;min-height:28px;font-weight:600}.erro
 (async()=>{
 const form=document.getElementById('lead'),status=document.getElementById('status'),button=document.getElementById('submit');
 let token='',enabled=false,requestId=null;
+const q=new URLSearchParams(location.search);
+const service=q.get('service');
+if(service==='climatisation'||service==='chauffe-eau')form.elements.service.value=service;
+const origin=q.get('origine');
+const origins=['climatisation','chauffe-eau','panne-eau-chaude','direct','partenaire','qr'];
+const attribution=origins.includes(origin)?origin:'direct';
 function state(message,error=false){status.textContent=message;status.className='status '+(error?'error':'success')}
 try{
   const response=await fetch('/api/config',{cache:'no-store'});const config=await response.json();
@@ -52,6 +60,7 @@ e.preventDefault();if(!enabled||!token||!form.reportValidity())return;
 button.disabled=true;state('Transmission de votre demande en cours…');
 const data=Object.fromEntries(new FormData(form).entries());
 data.rappel=document.getElementById('rappel').checked;data.captcha=token;
+data.origine=attribution;
 requestId??=crypto.randomUUID();
 data.id=requestId;
 try{
