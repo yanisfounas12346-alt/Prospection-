@@ -26,16 +26,23 @@ public final class BlueskyScanner {
     "climatisation", "chauffe-eau", "cumulus", "climatiseur",
     "clim Marseille", "chauffe eau Marseille", "clim Aix", "cumulus Aix",
     "clim Vitrolles", "chauffe eau Aubagne", "installateur clim 13",
-    "plombier chauffe eau 13"
+    "plombier chauffe eau 13", "remplacer cumulus", "changer chauffe eau",
+    "remplacer clim", "pose climatisation", "ballon eau chaude panne",
+    "installation climatisation"
   };
+  // Pages supplémentaires uniquement lorsque la page précédente est saturée.
+  // Limite prudente pour éviter une rafale de requêtes sur l'API publique.
+  private static final int PAGE_SIZE=100;
+  private static final int MAX_PAGES=3;
 
   public static final class Report {
-    public int searches, posts, candidates, added, errors;
+    public int searches, pages, posts, candidates, added, errors, truncated;
     public String failedQueries="";
     @Override public String toString(){
-      return "Bluesky : "+searches+" recherches, "+posts+
+      return "Bluesky : "+searches+" recherches, "+pages+" pages, "+posts+
         " publications, "+candidates+" demandes potentielles dans le 13, "+
-        added+" nouvelles, "+errors+" erreur(s)";
+        added+" nouvelles, "+errors+" erreur(s), "+
+        truncated+" recherche(s) possiblement tronquée(s)";
     }
   }
 
@@ -48,13 +55,18 @@ public final class BlueskyScanner {
     for(String query:QUERIES){
       report.searches++;
       try {
-        String url=ENDPOINT+"?q="+Uri.encode(query)+
-          "&sort=latest&lang=fr&limit=60";
-        JSONObject result=new JSONObject(readHttps(url));
-        JSONArray posts=result.optJSONArray("posts");
-        if(posts==null){report.errors++;report.failedQueries+=query+" (réponse invalide) ; ";continue;}
         Set<String> batch=new HashSet<>();
-        for(int i=0;i<posts.length();i++){
+        Set<String> cursors=new HashSet<>();
+        String cursor="";
+        for(int page=0;page<MAX_PAGES;page++){
+          String url=ENDPOINT+"?q="+Uri.encode(query)+
+            "&sort=latest&lang=fr&limit="+PAGE_SIZE+
+            (cursor.isEmpty()?"":"&cursor="+Uri.encode(cursor));
+          JSONObject result=new JSONObject(readHttps(url));
+          JSONArray posts=result.optJSONArray("posts");
+          if(posts==null)throw new java.io.IOException("Réponse de recherche sans posts");
+          report.pages++;
+          for(int i=0;i<posts.length();i++){
           JSONObject post=posts.optJSONObject(i);
           if(post==null)continue;
           report.posts++;
@@ -90,6 +102,11 @@ public final class BlueskyScanner {
             // Storage errors must be visible; the next scan can retry the post.
             report.errors++;
           }
+          }
+          String next=result.optString("cursor","");
+          if(posts.length()<PAGE_SIZE || next.isEmpty() || !cursors.add(next))break;
+          if(page+1==MAX_PAGES){report.truncated++;break;}
+          cursor=next;
         }
       }catch(Exception e){
         report.errors++;
