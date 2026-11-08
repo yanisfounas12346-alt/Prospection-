@@ -17,9 +17,7 @@ public class RadarJobService extends JobService {
     if(scheduler==null)return;
     String feeds=ctx.getSharedPreferences("franceclim",MODE_PRIVATE).getString("feeds","");
     boolean enabled=ctx.getSharedPreferences("franceclim",MODE_PRIVATE)
-      .getBoolean("watch_bluesky",true) ||
-      ctx.getSharedPreferences("franceclim",MODE_PRIVATE)
-      .getBoolean("watch_mastodon",true) ||
+      .getBoolean("watch_mastodon",false) ||
       (feeds!=null&&!feeds.trim().isEmpty());
     if(!enabled){scheduler.cancel(JOB_ID);return;}
     JobInfo info=new JobInfo.Builder(JOB_ID,new ComponentName(ctx,RadarJobService.class))
@@ -34,11 +32,10 @@ public class RadarJobService extends JobService {
       boolean retry=false;
       try {
         RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
-        BlueskyScanner.Report sky=BlueskyScanner.scan(getApplicationContext());
         // Horodatage et diagnostic local : aucune donnée de prospect enregistrée ici.
         getSharedPreferences("franceclim",MODE_PRIVATE).edit()
           .putLong("background_scan_completed_at",System.currentTimeMillis())
-          .putString("background_scan_summary",rss.toString()+" • "+sky.toString())
+          .putString("background_scan_summary",rss.toString())
           .apply();
       }catch(Exception e){
         retry=true;
