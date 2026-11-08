@@ -127,8 +127,26 @@ public class MapActivity extends Activity {
     if(intent==null||!Intent.ACTION_SEND.equals(intent.getAction()))return;
     if(!"text/plain".equals(intent.getType()))return;
     String raw=intent.getStringExtra(Intent.EXTRA_TEXT);
-    if(raw!=null&&!raw.trim().isEmpty())
-      RadarStore.add(this,raw,"","Partage volontaire");
+    if(raw==null||raw.trim().isEmpty())return;
+    FormEmailIntake.Request request=FormEmailIntake.parse(raw);
+    if(request!=null){
+      // Courriel explicitement partagé : pas d'accès automatique aux e-mails.
+      String description=request.detail+" "+request.service;
+      RadarStore.AddResult added=RadarStore.addWithIdentity(this,description,
+        request.city,"Formulaire direct / courriel partagé",request.id);
+      if(added.added){
+        boolean saved=RadarStore.setContactByFingerprint(this,added.fingerprint,
+          request.name,request.phone,true,request.evidence);
+        Toast.makeText(this,saved
+          ?"Demande importée avec téléphone. Vérifie la provenance de l'e-mail."
+          :"Demande importée, coordonnées à vérifier.",Toast.LENGTH_LONG).show();
+      }else{
+        Toast.makeText(this,"Demande déjà présente ou non éligible : "+added.reason,
+          Toast.LENGTH_LONG).show();
+      }
+      return;
+    }
+    RadarStore.add(this,raw,"","Partage volontaire");
   }
   @Override protected void onResume(){
     super.onResume();
