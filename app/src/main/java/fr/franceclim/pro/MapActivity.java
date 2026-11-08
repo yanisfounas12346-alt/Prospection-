@@ -451,11 +451,20 @@ public class MapActivity extends Activity {
           JSONObject preview=new JSONObject();
           preview.put("idx",i);
           preview.put("type",lead.optString("type","Demande"));
-          preview.put("score",Math.max(0,Math.min(100,lead.optInt("score",0))));
-          preview.put("source",lead.optString("source",""));
-          preview.put("city",rawCity);
           String original=lead.optString("detail","");
           String source=lead.optString("source","").toLowerCase(java.util.Locale.ROOT);
+          boolean callback=!lead.optString("phone","").trim().isEmpty() &&
+            lead.optBoolean("callbackRequested",false) &&
+            lead.optString("callbackEvidence","").trim().length()>=8;
+          // Requalifier les anciennes pistes à chaque affichage sans toucher aux dossiers.
+          // Seules les demandes explicites sont présentées en premier.
+          LeadClassifier.Result fresh=LeadClassifier.classify(original,rawCity);
+          boolean explicit=callback || (fresh.eligible && "PRIORITAIRE".equals(fresh.status));
+          preview.put("explicit",explicit);
+          preview.put("callback",callback);
+          preview.put("score",Math.max(0,Math.min(100,fresh.eligible?fresh.score:lead.optInt("score",0))));
+          preview.put("source",lead.optString("source",""));
+          preview.put("city",rawCity);
           // Les messages de formulaires directs peuvent contenir des données privées.
           String snippet=(source.contains("formulaire")||source.contains("csv")||
               source.contains("partage")||source.contains("saisie"))
