@@ -14,7 +14,7 @@ export function validateLead(raw) {
   if (!proof) return { error: 'Vous devez demander explicitement à être rappelé.' };
   return { value: { nom: name, telephone: phone, codePostal: postal, ville: city, besoin: detail, service } };
 }
-export const emailText = (lead, date, requestId = '') => [
+export const emailText = (lead, date, requestId = '', origin = 'direct') => [
   'Nouvelle demande volontaire de rappel — France Clim Radar 13',
   'Identifiant : ' + requestId,
   'Nom : ' + lead.nom,
@@ -25,5 +25,6 @@ export const emailText = (lead, date, requestId = '') => [
   'Demande de rappel : OUI, formulaire direct',
   'Date UTC : ' + date,
   'Source : formulaire web /demande',
+  'Origine de visite : ' + origin,
   'Preuve : case non précochée de demande explicite de rappel'
 ].join('\n');
