@@ -114,12 +114,16 @@ public final class RadarScanner {
     String key=sha((entry.link.isEmpty()?entry.id:entry.link).trim());
     if(key.equals(sha("")))key=sha(content);
     if(seen.contains(key))return;
-    seen.add(key);
-    // Toutes les sources (notifications, partage, RSS) alimentent le même CRM
-    // synchronisé, pour éviter d'écraser les dossiers détectés en parallèle.
+    // Mark an item seen ONLY after storage succeeds or the CRM confirms a duplicate.
+    // A full or unavailable store must not silently lose a customer request.
     String body=content+(entry.link.isEmpty()?"":" "+entry.link);
     RadarStore.AddResult added=RadarStore.add(ctx,body,"","Flux RSS/Atom");
-    if(!added.added)return;
+    if(!added.added){
+      if("Déjà détectée".equals(added.reason))seen.add(key);
+      else report.errors++;
+      return;
+    }
+    seen.add(key);
     report.added++;
     if(initialized && added.classification!=null &&
       "PRIORITAIRE".equals(added.classification.status)) {
