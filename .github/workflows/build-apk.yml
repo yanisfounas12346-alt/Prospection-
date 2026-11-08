@@ -42,6 +42,8 @@ jobs:
           mkdir -p build/radar-tests
           javac -encoding UTF-8 -d build/radar-tests app/src/main/java/fr/franceclim/pro/LeadClassifier.java app/src/main/java/fr/franceclim/pro/RadarClassifier.java tests/ClassifierSmoke.java
           java -cp build/radar-tests fr.franceclim.pro.ClassifierSmoke
+          javac -encoding UTF-8 -d build/radar-tests app/src/main/java/fr/franceclim/pro/FormEmailIntake.java tests/FormEmailIntakeSmoke.java
+          java -cp build/radar-tests fr.franceclim.pro.FormEmailIntakeSmoke
 
       - name: Tester le moteur de veille Python hors reseau
         shell: bash
