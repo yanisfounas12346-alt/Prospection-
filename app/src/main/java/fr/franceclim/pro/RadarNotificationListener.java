@@ -45,9 +45,14 @@ public class RadarNotificationListener extends NotificationListenerService {
       String n=LeadClassifier.normalize(title+" "+summary+" "+big);
       if(!(n.contains(" demande ")||n.contains(" recherche ")||
            n.contains(" annonce ")||n.contains(" chantier ")||
-           n.contains(" un voisin ")||n.contains(" besoin ")))return;
+           n.contains(" un voisin ")||n.contains(" besoin ")||
+           n.contains(" nouvelle mission ")||n.contains(" nouveau projet ")||
+           n.contains(" sollicitation ")||n.contains(" intervention ")||
+           n.contains(" votre secteur ")||n.contains(" votre zone ")))return;
       if(n.contains(" message prive ")||n.contains(" votre conversation ")||
-         n.contains(" paiement ")||n.contains(" connexion a votre compte "))return;
+         n.contains(" paiement ")||n.contains(" connexion a votre compte ")||
+         n.contains(" verification de compte ")||n.contains(" nouveau commentaire ")||
+         n.contains(" code de connexion ")||n.contains(" renouvellement abonnement "))return;
     }
     String source;
     if("fr.leboncoin".equals(pkg))source="Alerte Leboncoin";
