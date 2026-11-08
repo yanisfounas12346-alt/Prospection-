@@ -35,6 +35,13 @@ jobs:
           javac -encoding UTF-8 -d build/radar-tests app/src/main/java/fr/franceclim/pro/LeadClassifier.java app/src/main/java/fr/franceclim/pro/RadarClassifier.java tests/ClassifierSmoke.java
           java -cp build/radar-tests fr.franceclim.pro.ClassifierSmoke
 
+      - name: Tester le moteur de veille Python hors reseau
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m unittest discover -s radar13 -p 'test_*.py' -v
+          python3 -m radar13.run --demo
+
       - name: Tester le rendu et la confidentialite de la carte
         shell: bash
         run: python3 scripts/check_android_map.py
