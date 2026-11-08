@@ -37,8 +37,13 @@ public final class RadarStore {
     public final boolean added;
     public final String reason;
     public final LeadClassifier.Result classification;
+    public final String fingerprint;
     AddResult(boolean added,String reason,LeadClassifier.Result classification){
+      this(added,reason,classification,"");
+    }
+    AddResult(boolean added,String reason,LeadClassifier.Result classification,String fingerprint){
       this.added=added;this.reason=reason;this.classification=classification;
+      this.fingerprint=fingerprint;
     }
   }
   public static AddResult add(Context ctx,String raw,String cityHint,String source) {
@@ -92,7 +97,7 @@ public final class RadarStore {
         updated.put(item);
         SecureLeadStore.save(ctx,updated.toString());
         prefs(ctx).edit().putLong("last_match",System.currentTimeMillis()).apply();
-        return new AddResult(true,"Ajoutée au radar",analysis);
+        return new AddResult(true,"Ajoutée au radar",analysis,signature);
       }catch(Exception e){return new AddResult(false,"Erreur de stockage",analysis);}
     }
   }
@@ -163,6 +168,21 @@ public final class RadarStore {
         SecureLeadStore.save(c,leads.toString());
         return true;
       }catch(Exception ex){return false;}
+    }
+  }
+
+  /** Attach a form contact to its exact record, even if another source adds a lead. */
+  public static boolean setContactByFingerprint(Context c,String fingerprint,String name,
+    String phone,boolean requestedCallback,String evidence){
+    if(fingerprint==null||fingerprint.isEmpty())return false;
+    synchronized(LOCK){
+      JSONArray records=leads(c);
+      for(int i=0;i<records.length();i++){
+        JSONObject lead=records.optJSONObject(i);
+        if(lead!=null&&fingerprint.equals(lead.optString("fingerprint")))
+          return setContact(c,i,name,phone,requestedCallback,evidence);
+      }
+      return false;
     }
   }
 
