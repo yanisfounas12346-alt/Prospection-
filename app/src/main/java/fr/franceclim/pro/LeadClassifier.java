@@ -111,6 +111,32 @@ public final class LeadClassifier {
       "un bon climaticien","bon climaticien","bon plombier","des avis sur un installateur",
       "quel artisan","connaissez vous quelqu un","des recommandations","un contact pour",
       "vous auriez un contact","besoin d aide pour");
+    // Une demande de renseignements, une étude de marché ou une question théorique
+    // ne constitue pas nécessairement une demande d'intervention d'un particulier.
+    boolean informative=any(norm,"article de blog","dans cet article","notre guide",
+      "guide complet","comparatif","nos conseils","actualites","actualite",
+      "combien coute une clim","quel est le prix d une clim",
+      "prix moyen d une climatisation","avantages et inconvenients",
+      "subventions disponibles","comment fonctionne un chauffe eau",
+      "comment installer une clim","tutoriel installation","formation climaticien");
+    boolean trade=any(norm,"je suis climaticien","nous sommes installateurs",
+      "offre d emploi","recrutement","recrute un climaticien",
+      "recrutons","stage climaticien","poste a pourvoir");
+    boolean actionable=any(norm,"je cherche un artisan","je cherche un installateur",
+      "je cherche quelqu un","je cherche un plombier",
+      "je recherche une entreprise","je recherche un installateur",
+      "besoin d un artisan","besoin d un plombier","besoin de faire installer",
+      "besoin de remplacer","faire poser une clim","faire installer une clim",
+      "faire remplacer","demande de devis","devis pour","devis installation",
+      "devis remplacement","connaissez vous un installateur",
+      "connaissez vous un plombier","qui peut venir","qui pourrait venir",
+      "un bon climaticien","bon climaticien","bon plombier",
+      "vous auriez un contact","un contact pour",
+      "je veux remplacer","je souhaite remplacer","je dois remplacer",
+      "je voudrais installer","j aimerais installer","souhaite installer",
+      "souhaiterais installer","quel artisan","a qui faire appel",
+      "quelqu un pour installer","quelqu un pour remplacer",
+      "cherche installateur","cherche plombier");
     boolean specific=any(norm,"installation","installer","remplacer","remplacement",
       "changer","pose de","pose d","poser","monter","devis","technicien","artisan","plombier","installateur","remise en service","remettre en marche",
       "climaticien","frigoriste","societe","entreprise","changer mon","remplacer mon");
@@ -128,7 +154,11 @@ public final class LeadClassifier {
     if(repairOnly)score-=25;
     score=Math.max(0,Math.min(100,score));
     // No cold outreach: a public text is not evidence of consent.
-    String status=request&&specific&&geo&&score>=75?"PRIORITAIRE":"A_VERIFIER";
+    // Une publication informative/professionnelle reste une piste à vérifier,
+    // jamais une demande prioritaire. Pour être prioritaire, on doit lire
+    // une recherche concrète d'intervenant ou de devis, et pas un simple mot-clé.
+    String status=request&&specific&&actionable&&!informative&&!trade&&geo&&
+      score>=75?"PRIORITAIRE":"A_VERIFIER";
     String reason=(!geo?"Localisation à confirmer. ":"")
       +(request?"Demande explicite détectée. ":"Besoin possible, intention à confirmer. ")
       +(emergency?"Situation potentiellement urgente. ":"")
