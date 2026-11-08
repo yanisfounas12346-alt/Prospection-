@@ -63,7 +63,8 @@ public final class LeadClassifier {
   public static Result classify(String text,String cityHint) {
     String norm=normalize((text==null?"":text)+" "+(cityHint==null?"":cityHint));
     boolean clim=any(norm,"clim","climatisation","climatiseur","clim réversible","clim reversible",
-      "split","monosplit","multisplit","multi split","bi split","gainable","pac air air","pompe a chaleur air air","air conditionne","clim qui fuit");
+      "split","monosplit","multisplit","multi split","bi split","gainable","pac air air","pompe a chaleur air air","air conditionne","clim qui fuit",
+      "climaticien","frigoriste");
     boolean eau=any(norm,"chauffe eau","chauffe-eau","cumulus","ballon d eau chaude",
       "ballon eau chaude","ballon electrique","eau chaude","ballon thermodynamique","ballon ecs","chauffe bain",
       "ballon d eau","ballon d eau chaude perce","plus d eau chaude sanitaire");
