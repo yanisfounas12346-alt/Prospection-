@@ -31,11 +31,24 @@ public class RadarJobService extends JobService {
   }
   @Override public boolean onStartJob(JobParameters params){
     new Thread(()->{
+      boolean retry=false;
       try {
-        RadarScanner.scan(getApplicationContext());
-        BlueskyScanner.scan(getApplicationContext());
+        RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
+        BlueskyScanner.Report sky=BlueskyScanner.scan(getApplicationContext());
+        // Horodatage et diagnostic local : aucune donnée de prospect enregistrée ici.
+        getSharedPreferences("franceclim",MODE_PRIVATE).edit()
+          .putLong("background_scan_completed_at",System.currentTimeMillis())
+          .putString("background_scan_summary",rss.toString()+" • "+sky.toString())
+          .apply();
+      }catch(Exception e){
+        retry=true;
+        getSharedPreferences("franceclim",MODE_PRIVATE).edit()
+          .putLong("background_scan_failed_at",System.currentTimeMillis())
+          .putString("background_scan_error",e.getClass().getSimpleName())
+          .apply();
+      }finally{
+        jobFinished(params,retry);
       }
-      finally {jobFinished(params,false);}
     },"franceclim-radar").start();
     return true;
   }
