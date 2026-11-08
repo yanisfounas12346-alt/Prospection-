@@ -10,6 +10,14 @@ Dernier audit technique : 8 novembre 2026. Pas de promesse de couverture à 100 
 - Pas de suppression silencieuse des anciennes pistes : limite explicite de 500 dossiers avant sauvegarde et gestion des dossiers.
 - Contrôles statiques de confidentialité intégrés au workflow APK, versionCode porté à 8.
 
+## Non-régression ajoutée (8 novembre 2026)
+- Sept tests Python dans `radar13/test_delivery.py` : reprises RSS/Bluesky si WhatsApp absent, e-mails non acquittés si notification impossible, preuve de message ID du fournisseur, reprise après échec et conservation des dernières empreintes.
+- Les empreintes d'annonces qualifiées ne sont désormais enregistrées comme traitées qu'après confirmation d'envoi sur le canal actif. Sans ce canal, une demande reste en attente tant qu'elle figure dans la source.
+- Les publications Bluesky communes à plusieurs recherches sont dédoublonnées pendant chaque analyse.
+- La mémoire anti-doublons préserve les dernières empreintes insérées et ne sélectionne plus arbitrairement les valeurs SHA.
+- Ces tests sont appelés par les workflows GitHub Actions Android et veille. La réussite des tests sur le dernier commit doit être confirmée dans GitHub Actions ; elle n'est pas prouvée par le seul dépôt du code.
+- **Limite non résolue :** il n'existe pas encore de boîte d'attente persistante contenant des demandes qualifiées côté serveur sécurisé. Une publication devenue inaccessible peut donc être perdue si aucun canal d'alerte n'était disponible.
+
 ## À valider impérativement avant diffusion
 1. GitHub Actions « build-apk » : tests Java et Python, contrôle carte, contrôle de confidentialité, compilation Gradle, signature et artefact APK.
 2. Essai sur Android réel : mise à jour sans perte des contacts, migration depuis SharedPreferences anciennes, redémarrage, refus d'accès aux notifications, absence de réseau, retour en ligne, export et réimport JSON.
