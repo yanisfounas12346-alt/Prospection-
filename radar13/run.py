@@ -152,7 +152,8 @@ def scan_feeds(state):
         key = fingerprint(url)
         old = state["feeds"].get(key)
         first = old is None
-        seen = set(old or [])
+        ordered_seen = list(old or [])
+        seen = set(ordered_seen)
         try:
             items = fetch_feed(url)
         except Exception as exc:
@@ -176,15 +177,19 @@ def scan_feeds(state):
                     reported += 1
             if acknowledged:
                 seen.add(ident)
+                ordered_seen.append(ident)
             fresh += 1
-        state["feeds"][key] = sorted(seen)[-4000:]
+        # Keep the most recently acknowledged items, never a lexicographic
+        # selection of random SHA-256 values.
+        state["feeds"][key] = ordered_seen[-4000:]
         print(f"{source} : {len(items)} publication(s) lues")
     return fresh, reported
 
 
 def scan_bluesky(state):
     """Recherche des posts publics par l'API Bluesky, aucune identification privée."""
-    seen = set(state.get("bluesky", []))
+    ordered_seen = list(state.get("bluesky", []))
+    seen = set(ordered_seen)
     first = "bluesky" not in state
     # One post can match several keywords; do not count or alert it repeatedly.
     batch = set()
@@ -211,9 +216,10 @@ def scan_bluesky(state):
                     sent += 1
             if acknowledged:
                 seen.add(key)
+                ordered_seen.append(key)
             fresh += 1
         print(f"Bluesky / {term} : {len(posts)} publications publiques analysées")
-    state["bluesky"] = sorted(seen)[-4000:]
+    state["bluesky"] = ordered_seen[-4000:]
     return fresh, sent
 
 
