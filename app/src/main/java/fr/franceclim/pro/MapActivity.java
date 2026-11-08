@@ -422,11 +422,14 @@ public class MapActivity extends Activity {
         prefs.edit().putString("last_scan_failures",
           (rss.failedSources.isEmpty()?"":("RSS : "+rss.failedSources))+
           (sky.failedQueries.isEmpty()?"":("Bluesky : "+sky.failedQueries))).apply();
-        status="Recherche terminée : RSS "+rss.checked+" publication(s), "+
-          rss.errors+" erreur(s) ; Bluesky "+sky.posts+" publication(s), "+
-          sky.errors+" erreur(s). "+(rss.added+sky.added)+
-          " nouvelle(s) piste(s) potentielles. Les publications publiques ne sont "+
-          "pas des demandes de rappel.";
+        boolean incomplete=rss.errors>0||sky.errors>0||sky.truncated>0;
+        status=(incomplete?"COUVERTURE INCOMPLÈTE — vérifier les sources. ":
+          "Recherche des sources accessibles terminée. ")+
+          "RSS : "+rss.checked+" publications / "+rss.errors+" erreur(s). "+
+          "Bluesky : "+sky.posts+" publications sur "+sky.pages+" pages / "+
+          sky.errors+" erreur(s), "+sky.truncated+" recherche(s) tronquée(s). "+
+          (rss.added+sky.added)+" nouvelle(s) piste(s) potentielles. "+
+          "Pas de garantie sur les plateformes non connectées.";
       }catch(Exception e){status="Certaines sources sont indisponibles. Les dossiers déjà enregistrés restent visibles.";}
       final String note=status;
       scanning.set(false);
