@@ -46,6 +46,10 @@ jobs:
         shell: bash
         run: python3 scripts/check_android_map.py
 
+      - name: Verifier confidentialite et integrite des dossiers
+        shell: bash
+        run: python3 scripts/check_security.py
+
       - name: Installer les outils Android
         uses: android-actions/setup-android@v4
 
