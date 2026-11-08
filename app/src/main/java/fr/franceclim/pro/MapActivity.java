@@ -187,8 +187,9 @@ public class MapActivity extends Activity {
       "AlloVoisins — vraies demandes chauffage / climatisation (Marseille)",
       "AlloVoisins — activer les alertes professionnelles",
       "Leboncoin — créer les recherches sauvegardées",
-      "Travaux.com — espace professionnels",
-      "NeedHelp — consulter les missions"
+      "Travaux.com — appels d'offres locaux",
+      "NeedHelp — missions et coordonnées autorisées",
+      "StarOfService — demandes de devis clients"
     };
     new AlertDialog.Builder(this).setTitle("Sources des opportunités")
       .setMessage("Le radar écoute les sources publiques et les applications que tu autorises. Les coordonnées privées ne sont pas extraites des profils.")
@@ -202,8 +203,9 @@ public class MapActivity extends Activity {
           case 5:openExternal(Uri.parse("https://www.allovoisins.com/r/0/130/82171/0/Marseille/service/Chauffage-climatisation"));break;
           case 6:openExternal(Uri.parse("https://support-pro.allovoisins.com/hc/fr/articles/16199176771730--Comment-proposer-mes-services"));break;
           case 7:openExternal(Uri.parse("https://www.leboncoin.fr/"));break;
-          case 8:openExternal(Uri.parse("https://www.travaux.com/"));break;
-          case 9:openExternal(Uri.parse("https://www.needhelp.com/"));break;
+          case 8:openExternal(Uri.parse("https://www.travaux.com/professionnel/inscription/appel-d-offres"));break;
+          case 9:openExternal(Uri.parse("https://www.needhelp.com/content/subscription"));break;
+          case 10:openExternal(Uri.parse("https://www.starofservice.com/pro/how-it-works"));break;
         }
       }).setNegativeButton("Fermer",null).show();
   }
