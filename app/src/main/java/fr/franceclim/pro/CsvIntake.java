@@ -124,7 +124,7 @@ public final class CsvIntake {
       report.added++;
       boolean asked=yes(callback)&&proof.length()>=8;
       if(yes(callback)&&!asked)report.callbackProofMissing++;
-      boolean ok=RadarStore.setContact(ctx,RadarStore.leads(ctx).length()-1,
+      boolean ok=RadarStore.setContactByFingerprint(ctx,result.fingerprint,
         name,phone,asked,proof);
       if(ok && (!name.isEmpty()||!phone.isEmpty()))report.contacts++;
     }
