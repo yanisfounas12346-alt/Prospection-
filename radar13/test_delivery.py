@@ -12,6 +12,21 @@ FEED = "https://example.org/authorized.rss"
 
 
 class DeliveryRegressionTests(unittest.TestCase):
+    def test_first_rss_sync_without_whatsapp_can_replay_when_configured(self):
+        state = {"feeds": {}}
+        entry = {"id": "first-run", "text": REQUEST, "title": "", "link": ""}
+        with patch("radar13.run.load_feeds", return_value=[("Flux test", FEED)]), \
+             patch("radar13.run.fetch_feed", return_value=[entry]), \
+             patch("radar13.run.whatsapp_configured", return_value=False), \
+             patch("radar13.run.alert") as sender:
+            self.assertEqual(scan_feeds(state), (1, 0))
+            self.assertEqual(state["feeds"][fingerprint(FEED)], [])
+            sender.assert_not_called()
+        with patch("radar13.run.load_feeds", return_value=[("Flux test", FEED)]), \
+             patch("radar13.run.fetch_feed", return_value=[entry]), \
+             patch("radar13.run.alert", return_value=True):
+            self.assertEqual(scan_feeds(state), (1, 1))
+
     def test_rss_unconfigured_channel_does_not_consume_lead(self):
         state = {"feeds": {fingerprint(FEED): []}}
         entry = {"id": "post-1", "text": REQUEST, "title": "", "link": ""}
