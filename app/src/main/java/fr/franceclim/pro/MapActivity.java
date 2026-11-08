@@ -403,12 +403,11 @@ public class MapActivity extends Activity {
       try {
         RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
         BlueskyScanner.Report sky=BlueskyScanner.scan(getApplicationContext());
-        status="Veille terminée : "+rss.checked+" publication(s) RSS examinée(s), "+
-          sky.posts+" Bluesky. "+(rss.added+sky.added)+" nouvelle(s) piste(s). "+
-          (rss.errors+sky.errors>0
-            ?(rss.errors+sky.errors)+" source(s)/recherche(s) en erreur. "
-            :"")+
-          "Les alertes des plateformes nécessitent une configuration séparée.";
+        status="Recherche terminée : RSS "+rss.checked+" publication(s), "+
+          rss.errors+" erreur(s) ; Bluesky "+sky.posts+" publication(s), "+
+          sky.errors+" erreur(s). "+(rss.added+sky.added)+
+          " nouvelle(s) piste(s) potentielles. Les publications publiques ne sont "+
+          "pas des demandes de rappel.";
       }catch(Exception e){status="Certaines sources sont indisponibles. Les dossiers déjà enregistrés restent visibles.";}
       final String note=status;
       scanning.set(false);
@@ -426,6 +425,16 @@ public class MapActivity extends Activity {
       try {
         Map<String,City> centers=loadCenters();
         JSONArray leads=RadarStore.leads(getApplicationContext());
+        int callable=0;
+        for(int k=0;k<leads.length();k++){
+          JSONObject item=leads.optJSONObject(k);
+          if(item==null||item.optBoolean("demo",false)||
+             "Classé".equals(item.optString("status")))continue;
+          if(!item.optString("phone","").trim().isEmpty() &&
+             item.optBoolean("callbackRequested",false) &&
+             item.optString("callbackEvidence","").trim().length()>=8)callable++;
+        }
+        final int callableCount=callable;
         LinkedHashMap<String,Group> groups=new LinkedHashMap<>();
         JSONArray unlocated=new JSONArray();
         for(int i=0;i<leads.length();i++){
@@ -474,6 +483,8 @@ public class MapActivity extends Activity {
         JSONObject payload=new JSONObject();
         payload.put("pins",pins);
         payload.put("unlocated",unlocated);
+        // Agrégat seulement : aucune donnée nominative ou téléphone dans la page WebView.
+        payload.put("callableCount",callableCount);
         runOnUiThread(()->{
           pending=payload;
           sendToPage();
