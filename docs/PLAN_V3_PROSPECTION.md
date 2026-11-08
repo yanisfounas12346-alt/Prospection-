@@ -11,7 +11,7 @@ Dernier audit technique : 8 novembre 2026. Pas de promesse de couverture à 100 
 - Contrôles statiques de confidentialité intégrés au workflow APK, versionCode porté à 8.
 
 ## Non-régression ajoutée (8 novembre 2026)
-- Sept tests Python dans `radar13/test_delivery.py` : reprises RSS/Bluesky si WhatsApp absent, e-mails non acquittés si notification impossible, preuve de message ID du fournisseur, reprise après échec et conservation des dernières empreintes.
+- Huit tests Python dans `radar13/test_delivery.py` : reprises RSS/Bluesky si WhatsApp absent, e-mails non acquittés si notification impossible, preuve de message ID du fournisseur, reprise après échec et conservation des dernières empreintes.
 - Les empreintes d'annonces qualifiées ne sont désormais enregistrées comme traitées qu'après confirmation d'envoi sur le canal actif. Sans ce canal, une demande reste en attente tant qu'elle figure dans la source.
 - Les publications Bluesky communes à plusieurs recherches sont dédoublonnées pendant chaque analyse.
 - La mémoire anti-doublons préserve les dernières empreintes insérées et ne sélectionne plus arbitrairement les valeurs SHA.
