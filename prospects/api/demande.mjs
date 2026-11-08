@@ -1,4 +1,4 @@
-import { validateLead, emailText } from './_validate.mjs';
+import { validateLead, emailText } from '../lib/validate.mjs';
 
 function message(res, code, error){
   res.setHeader('Cache-Control','no-store');
