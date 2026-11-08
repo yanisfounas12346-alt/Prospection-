@@ -8,7 +8,7 @@ android {
     applicationId 'fr.franceclim.pro.radar'
     minSdk 24
     targetSdk 33
-    versionCode 7
-    versionName '2.5.0-sources-travaux'
+    versionCode 8
+    versionName '2.6.0-fiabilite-confidentialite'
   }
 }
