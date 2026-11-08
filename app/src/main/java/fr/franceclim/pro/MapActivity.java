@@ -184,7 +184,8 @@ public class MapActivity extends Activity {
       "Importer les demandes reçues (CSV avec contacts)",
       "Ajouter des flux RSS/Atom autorisés",
       "Diagnostic des sources actives",
-      "AlloVoisins — ouvrir le site",
+      "AlloVoisins — vraies demandes chauffage / climatisation (Marseille)",
+      "AlloVoisins — activer les alertes professionnelles",
       "Leboncoin — créer les recherches sauvegardées",
       "Travaux.com — espace professionnels",
       "NeedHelp — consulter les missions"
@@ -198,10 +199,11 @@ public class MapActivity extends Activity {
           case 2:chooseCsv();break;
           case 3:editFeeds();break;
           case 4:showSourcesStatus();break;
-          case 5:openExternal(Uri.parse("https://www.allovoisins.com/"));break;
-          case 6:openExternal(Uri.parse("https://www.leboncoin.fr/"));break;
-          case 7:openExternal(Uri.parse("https://www.travaux.com/"));break;
-          case 8:openExternal(Uri.parse("https://www.needhelp.com/"));break;
+          case 5:openExternal(Uri.parse("https://www.allovoisins.com/r/0/130/82171/0/Marseille/service/Chauffage-climatisation"));break;
+          case 6:openExternal(Uri.parse("https://support-pro.allovoisins.com/hc/fr/articles/16199176771730--Comment-proposer-mes-services"));break;
+          case 7:openExternal(Uri.parse("https://www.leboncoin.fr/"));break;
+          case 8:openExternal(Uri.parse("https://www.travaux.com/"));break;
+          case 9:openExternal(Uri.parse("https://www.needhelp.com/"));break;
         }
       }).setNegativeButton("Fermer",null).show();
   }
