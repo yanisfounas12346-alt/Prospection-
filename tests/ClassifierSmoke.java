@@ -57,6 +57,18 @@ public final class ClassifierSmoke {
     LeadClassifier.Result quote=LeadClassifier.classify(
       "Je cherche un artisan pour installer une clim à Salon-de-Provence, besoin d'un devis.", "");
     expect("PRIORITAIRE".equals(quote.status),"vraie demande de devis prioritaire");
+    LeadClassifier.Result colloquial=LeadClassifier.classify(
+      "Je dois changer mon chauffe eau à Vitrolles, qui peut le faire ?", "");
+    expect(colloquial.eligible&&"PRIORITAIRE".equals(colloquial.status),
+      "remplacement naturel chauffe-eau Vitrolles");
+    LeadClassifier.Result replacement=LeadClassifier.classify(
+      "Ma clim est morte à Marseille, je cherche un frigoriste pour la remplacer.", "");
+    expect(replacement.eligible&&"PRIORITAIRE".equals(replacement.status),
+      "panne clim remplacement frigoriste Marseille");
+    LeadClassifier.Result quote2=LeadClassifier.classify(
+      "Demande un devis climatisation à Aubagne pour installation.", "");
+    expect(quote2.eligible&&"PRIORITAIRE".equals(quote2.status),
+      "devis climatisation Aubagne");
     System.out.println("OK: "+pass+" tests de qualification.");
   }
 }
