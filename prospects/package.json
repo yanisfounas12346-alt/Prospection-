@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "build": "npm test && mkdir -p public && cp index.html public/index.html"
+    "build": "npm test && mkdir -p public && cp index.html robots.txt sitemap.xml public/ && cp -R landing/. public/"
   },
   "engines": {
     "node": "22.x"
