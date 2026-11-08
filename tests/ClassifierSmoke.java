@@ -2,7 +2,9 @@ package fr.franceclim.pro;
 public final class ClassifierSmoke {
   static int pass=0;
   static void expect(boolean b,String message) {
-    if(!b)throw new AssertionError(message);pass++;
+    if(!b)throw new AssertionError(message);
+    pass++;
+    System.out.println("PASS "+pass+" : "+message);
   }
   public static void main(String[] args) {
     expect(LeadClassifier.COMMUNES.length==119,"119 communes INSEE");
