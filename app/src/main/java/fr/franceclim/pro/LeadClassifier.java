@@ -67,7 +67,8 @@ public final class LeadClassifier {
       "climaticien","frigoriste");
     boolean eau=any(norm,"chauffe eau","chauffe-eau","cumulus","ballon d eau chaude",
       "ballon eau chaude","ballon electrique","eau chaude","ballon thermodynamique","ballon ecs","chauffe bain",
-      "ballon d eau","ballon d eau chaude perce","plus d eau chaude sanitaire");
+      "ballon d eau","ballon d eau chaude perce","plus d eau chaude sanitaire",
+      "chauffe eau electrique","ballon eau chaude","ballon ecs","ballon a remplacer");
     if(!clim&&!eau) return new Result("AUTRE","Zone à vérifier","HORS_SUJET",
       "Aucun besoin lié à la climatisation ou au chauffe-eau détecté",0,false,false,false);
 
@@ -110,7 +111,15 @@ public final class LeadClassifier {
       "recommandation d installateur","recommandation plombier",
       "un bon climaticien","bon climaticien","bon plombier","des avis sur un installateur",
       "quel artisan","connaissez vous quelqu un","des recommandations","un contact pour",
-      "vous auriez un contact","besoin d aide pour");
+      "vous auriez un contact","besoin d aide pour",
+      "je dois changer","il faut changer","il faut remplacer","je souhaite changer",
+      "on doit changer","on veut changer","j ai besoin de changer",
+      "j ai besoin de remplacer","je compte remplacer",
+      "ma clim est morte","ma clim a lache","mon cumulus a lache",
+      "mon chauffe eau a lache","je refais ma clim",
+      "ou trouver un climaticien","ou trouver un plombier",
+      "quelqu un pour changer","qui peut remplacer","qui peut installer",
+      "demande un devis","devis chauffe eau","devis climatisation");
     // Une demande de renseignements, une étude de marché ou une question théorique
     // ne constitue pas nécessairement une demande d'intervention d'un particulier.
     boolean informative=any(norm,"article de blog","dans cet article","notre guide",
@@ -136,7 +145,15 @@ public final class LeadClassifier {
       "je voudrais installer","j aimerais installer","souhaite installer",
       "souhaiterais installer","quel artisan","a qui faire appel",
       "quelqu un pour installer","quelqu un pour remplacer",
-      "cherche installateur","cherche plombier");
+      "cherche installateur","cherche plombier",
+      "je dois changer","il faut remplacer","il faut changer",
+      "je souhaite changer","on doit changer","on veut changer",
+      "j ai besoin de changer","j ai besoin de remplacer",
+      "je compte remplacer","ma clim est morte","ma clim a lache",
+      "mon cumulus a lache","mon chauffe eau a lache",
+      "ou trouver un climaticien","ou trouver un plombier",
+      "quelqu un pour changer","qui peut remplacer","qui peut installer",
+      "demande un devis","devis chauffe eau","devis climatisation");
     boolean specific=any(norm,"installation","installer","remplacer","remplacement",
       "changer","pose de","pose d","poser","monter","devis","technicien","artisan","plombier","installateur","remise en service","remettre en marche",
       "climaticien","frigoriste","societe","entreprise","changer mon","remplacer mon");
