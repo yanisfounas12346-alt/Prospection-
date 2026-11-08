@@ -49,7 +49,7 @@ form.addEventListener('submit',async e=>{
 e.preventDefault();if(!enabled||!token||!form.reportValidity())return;
 button.disabled=true;state('Transmission de votre demande en cours…');
 const data=Object.fromEntries(new FormData(form).entries());
-data.rappel=form.rappel.checked;data.captcha=token;
+data.rappel=document.getElementById('rappel').checked;data.captcha=token;
 data.id=crypto.randomUUID();
 try{
 const response=await fetch('/api/demande',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
