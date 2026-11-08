@@ -63,7 +63,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 <header class="header">
   <div class="brand"><div><strong>FRANCE CLIM <span style="color:#008f86">RADAR 13</span></strong><small>Opportunités de particuliers • Bouches-du-Rhône</small></div><div class="brandRight"><button class="sourcesBtn" id="sources" aria-label="Configurer les sources d'annonces">Sources ⚙</button><div class="counter" id="counter">0 piste</div></div></div>
   <div class="searchrow"><input id="search" type="search" placeholder="Rechercher une ville ou un besoin…" aria-label="Filtrer les opportunités"><button class="smallbutton" id="fit" title="Recentrer la carte" aria-label="Recentrer la carte">⌖</button></div>
-  <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="requests">Demandes ciblées</button><button class="filter" data-filter="callbacks">☎ Rappels</button><button class="filter" data-filter="review">À vérifier</button><button class="filter" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button></div>
+  <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="requests">Demandes ciblées</button><button class="filter" data-filter="callbacks">☎ Rappels</button><button class="filter" data-filter="review">À vérifier</button><button class="filter" data-filter="high">🔥 Prioritaires</button><button class="filter" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button></div>
 </header>
 <div id="notice" role="status" aria-live="polite">Chargement des opportunités…</div>
 <div id="emptyState"><b>Aucune demande détectée pour le moment</b><span id="emptyExplanation">Les flux publics ne garantissent pas de demandes locales. Active les alertes des plateformes de travaux dans Sources.</span><span id="emptyScanStatus" role="status" aria-live="polite"></span><button type="button" id="startSources" class="emptyConnect">Configurer les sources</button></div>
@@ -85,6 +85,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     if(mode==='requests'&&!o.explicit)return false;
     if(mode==='callbacks'&&!o.callback)return false;
     if(mode==='review'&&o.explicit)return false;
+    if(mode==='high'&&(!o.explicit||Number(o.score||0)<75))return false;
     if(mode==='clim'&&!type.includes('clim'))return false;
     if(mode==='eau'&&!(type.includes('eau')||type.includes('cumulus')))return false;
     if(mode==='high'&&Number(o.score||0)<75)return false;
