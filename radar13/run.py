@@ -132,6 +132,8 @@ def alert(item, source):
     if not result or result["score"] < 65:
         return False
     # Par confidentialité, on ne transmet ni nom, ni numéro, ni texte brut.
+    if not whatsapp_configured():
+        return False
     send_template(result["category"], result["city"], result["score"], source)
     return True
 
@@ -246,9 +248,11 @@ def main():
     args = parser.parse_args()
     if args.demo:
         return demo()
+    # La veille ne dépend pas de la configuration d'un canal d'alerte.
+    # Sans WhatsApp, les sources sont tout de même analysées et les empreintes
+    # anti-doublons mises à jour ; aucun message n'est envoyé.
     if not whatsapp_configured():
-        print("WhatsApp non configuré : renseigner les secrets de l'API WhatsApp Business, le numéro destinataire et un modèle approuvé. Aucun message envoyé.")
-        return 0
+        print("WhatsApp non configuré : veille active, sans notifications WhatsApp.")
     state = load_state()
     try:
         fresh, sent = scan_feeds(state)
