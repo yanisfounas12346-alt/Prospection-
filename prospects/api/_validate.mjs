@@ -5,10 +5,10 @@ export function validateLead(raw) {
   const city = clean(raw.ville), detail = clean(raw.besoin), service = clean(raw.service);
   const proof = raw.rappel === true;
   if (clean(raw.site_web)) return { error: 'Demande non acceptée.' };
-  if (!/^[\\p{L} '-]{2,80}$/u.test(name)) return { error: 'Précisez votre nom.' };
-  if (!/^(?:\\+33|0)[1-9](?:[ .-]?\\d{2}){4}$/.test(phone)) return { error: 'Numéro de téléphone français invalide.' };
-  if (!/^13\\d{3}$/.test(postal)) return { error: 'Le service couvre uniquement le département 13.' };
-  if (!/^[\\p{L} '-]{2,80}$/u.test(city)) return { error: 'Précisez votre commune.' };
+  if (!/^[\p{L} '-]{2,80}$/u.test(name)) return { error: 'Précisez votre nom.' };
+  if (!/^(?:\+33|0)[1-9](?:[ .-]?\d{2}){4}$/.test(phone)) return { error: 'Numéro de téléphone français invalide.' };
+  if (!/^13\d{3}$/.test(postal)) return { error: 'Le service couvre uniquement le département 13.' };
+  if (!/^[\p{L} '-]{2,80}$/u.test(city)) return { error: 'Précisez votre commune.' };
   if (!['climatisation','chauffe-eau'].includes(service)) return { error: 'Sélectionnez les travaux.' };
   if (detail.length < 15 || detail.length > 1200) return { error: 'Décrivez votre besoin (15 à 1200 caractères).' };
   if (!proof) return { error: 'Vous devez demander explicitement à être rappelé.' };
@@ -25,4 +25,4 @@ export const emailText = (lead, date) => [
   'Date UTC : ' + date,
   'Source : formulaire web /demande',
   'Preuve : case non précochée de demande explicite de rappel'
-].join('\\n');
+].join('\n');
