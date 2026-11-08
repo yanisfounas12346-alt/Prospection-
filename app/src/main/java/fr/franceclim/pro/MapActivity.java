@@ -279,7 +279,7 @@ public class MapActivity extends Activity {
     input.setHint("https://site-autorisant-les-flux.example/feed.rss");
     input.setText(prefs.getString("feeds",""));
     new AlertDialog.Builder(this).setTitle("Flux RSS ou Atom publics")
-      .setMessage("Une URL HTTPS par ligne. Utiliser uniquement des flux officiels ou autorisés. Les deux flux Mastodon sont déjà intégrés.")
+      .setMessage("Une URL HTTPS par ligne. Utiliser uniquement des flux officiels ou autorisés. Les demandes des plateformes sont suivies via leurs alertes professionnelles.")
       .setView(input).setPositiveButton("Enregistrer",(d,w)->{
         String value=input.getText().toString().trim();
         for(String line:value.split("\\r?\\n")){
@@ -418,18 +418,13 @@ public class MapActivity extends Activity {
       String status;
       try {
         RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
-        BlueskyScanner.Report sky=BlueskyScanner.scan(getApplicationContext());
-        prefs.edit().putString("last_scan_failures",
-          (rss.failedSources.isEmpty()?"":("RSS : "+rss.failedSources))+
-          (sky.failedQueries.isEmpty()?"":("Bluesky : "+sky.failedQueries))).apply();
-        boolean incomplete=rss.errors>0||sky.errors>0||sky.truncated>0;
-        status=(incomplete?"COUVERTURE INCOMPLÈTE — vérifier les sources. ":
-          "Recherche des sources accessibles terminée. ")+
-          "RSS : "+rss.checked+" publications / "+rss.errors+" erreur(s). "+
-          "Bluesky : "+sky.posts+" publications sur "+sky.pages+" pages / "+
-          sky.errors+" erreur(s), "+sky.truncated+" recherche(s) tronquée(s). "+
-          (rss.added+sky.added)+" nouvelle(s) piste(s) potentielles. "+
-          "Pas de garantie sur les plateformes non connectées.";
+        prefs.edit().putString("last_scan_failures",rss.failedSources).apply();
+        status=(rss.errors>0?"COUVERTURE INCOMPLÈTE — source RSS indisponible. ":
+          "Veille des flux autorisés terminée. ")+
+          "RSS : "+rss.checked+" publications / "+rss.errors+" erreur(s) ; "+
+          rss.added+" nouvelle(s) piste(s) potentielles. "+
+          "Les annonces des plateformes dépendent de leurs alertes activées ; "+
+          "un numéro public ne vaut pas autorisation de rappel.";
       }catch(Exception e){status="Certaines sources sont indisponibles. Les dossiers déjà enregistrés restent visibles.";}
       final String note=status;
       scanning.set(false);
