@@ -123,6 +123,8 @@ test('valid request verifies captcha then submits only to owner mail provider',a
     const sent=JSON.parse(calls[1].opts.body);
     assert.deepEqual(sent.to,['test@example.org']);
     assert.match(sent.text,/06 12 34 56 78/);
+    assert.match(sent.text,/Origine de visite : direct/);
+    assert.match(sent.text,/Identifiant : 123e4567-e89b-42d3-a456-426614174000/);
   });
 });
 test('mail provider failure does not falsely confirm lead',async()=>{
@@ -157,5 +159,22 @@ test('malformed captcha and request size produce no outgoing calls',async()=>{
       assert.ok(res.statusCode>=400);
     }
     assert.equal(calls,0);
+  });
+});
+
+test('attribution is restricted to expected page identifiers',async()=>{
+  const calls=[];
+  await useEnv(ENV,successfulFetch(calls),async()=>{
+    const res=response();
+    await requestHandler({method:'POST',headers,body:{...valid(),origine:'climatisation'}},res);
+    assert.equal(res.statusCode,200);
+    assert.match(JSON.parse(calls[1].opts.body).text,/Origine de visite : climatisation/);
+  });
+  const rejected=[];
+  await useEnv(ENV,successfulFetch(rejected),async()=>{
+    const res=response();
+    await requestHandler({method:'POST',headers,body:{...valid(),origine:'<script>injection</script>'}},res);
+    assert.equal(res.statusCode,200);
+    assert.match(JSON.parse(rejected[1].opts.body).text,/Origine de visite : direct/);
   });
 });
