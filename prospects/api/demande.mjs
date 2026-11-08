@@ -62,7 +62,7 @@ export default async function handler(req,res){
         from:process.env.LEAD_FROM_EMAIL,
         to:[process.env.LEAD_TO_EMAIL],
         subject:'Demande de rappel '+parsed.value.service+' — '+parsed.value.ville,
-        text:emailText(parsed.value,new Date().toISOString())
+        text:emailText(parsed.value,new Date().toISOString(),id)
       }),
       signal:AbortSignal.timeout(9000)
     });
