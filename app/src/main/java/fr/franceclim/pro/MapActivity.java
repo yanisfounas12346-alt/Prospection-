@@ -179,8 +179,8 @@ public class MapActivity extends Activity {
   /** Les réglages sont secondaires : la carte demeure l'écran principal. */
   private void showSources(){
     String[] choices={
-      "Activer l'accès aux alertes Android",
-      "Choisir les applications de travaux à surveiller",
+      "Activer l'ingestion automatique des alertes",
+      "Choisir les plateformes à surveiller automatiquement",
       "Importer les demandes reçues (CSV avec contacts)",
       "Ajouter des flux RSS/Atom autorisés",
       "Diagnostic des sources actives",
@@ -192,7 +192,7 @@ public class MapActivity extends Activity {
       "StarOfService — demandes de devis clients"
     };
     new AlertDialog.Builder(this).setTitle("Sources des opportunités")
-      .setMessage("Le radar écoute les sources publiques et les applications que tu autorises. Les coordonnées privées ne sont pas extraites des profils.")
+      .setMessage("Après activation, les nouvelles alertes des plateformes choisies entrent automatiquement dans tes dossiers. La collecte dépend des notifications réellement envoyées par chaque plateforme et ne lit pas les messages privés.")
       .setItems(choices,(dlg,selection)->{
         switch(selection){
           case 0:requestNotificationAccess();break;
@@ -255,12 +255,12 @@ public class MapActivity extends Activity {
       Collections.<String>emptySet());
     for(int i=0;i<ids.size();i++){
       String id=ids.get(i);
-      if("fr.leboncoin".equals(id))checked[i]=prefs.getBoolean("watch_lbc",true);
+      if("fr.leboncoin".equals(id))checked[i]=prefs.getBoolean("watch_lbc",false);
       else if("com.facebook.katana".equals(id))checked[i]=prefs.getBoolean("watch_fb",false);
       else checked[i]=selected.contains(id);
     }
     new AlertDialog.Builder(this).setTitle("Applications de demandes")
-      .setMessage("Sélectionne uniquement les plateformes professionnelles ou les alertes de groupes que tu souhaites surveiller. Il faut avoir installé ces applications et activé leurs notifications.")
+      .setMessage("Sélectionne les applications de travaux installées puis active leurs alertes officielles par métier et par commune. Le radar enregistre automatiquement leurs nouvelles demandes lorsque les notifications arrivent. Aucune messagerie privée n'est lue.")
       .setMultiChoiceItems(names.toArray(new String[0]),checked,(d,index,on)->checked[index]=on)
       .setPositiveButton("Enregistrer",(d,w)->{
         Set<String> picked=new LinkedHashSet<>();
@@ -318,7 +318,7 @@ public class MapActivity extends Activity {
       +"\\nLeboncoin : "+(prefs.getBoolean("watch_lbc",true)?"choisi":"désactivé")
       +"\\nFacebook : "+(prefs.getBoolean("watch_fb",false)?"choisi":"désactivé")
       +"\\nAutres plateformes installées : "+platforms.size()
-      +"\\nMastodon : "+(prefs.getBoolean("watch_mastodon",true)?"actif":"désactivé")
+      +"\\nMastodon : "+(prefs.getBoolean("watch_mastodon",false)?"actif":"désactivé")
       +"\\nRendement Leboncoin (alertes / dossiers / prioritaires) : "+
         sourceYield("leboncoin")
       +"\\nRendement Facebook (alertes / dossiers / prioritaires) : "+
