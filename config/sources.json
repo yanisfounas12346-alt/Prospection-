@@ -2,11 +2,11 @@
   {
     "name": "Mastodon public — #climatisation",
     "url": "https://mastodon.social/tags/climatisation.rss",
-    "enabled": true
+    "enabled": false
   },
   {
     "name": "Mastodon public — #chauffeeau",
     "url": "https://mastodon.social/tags/chauffeeau.rss",
-    "enabled": true
+    "enabled": false
   }
 ]
