@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b283b">
 <title>France Clim Radar 13 — Carte</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+
 <style>
 :root{color-scheme:light;--navy:#0b283b;--ink:#112f42;--teal:#008f86;--bg:#f8fafb;--border:#dce7eb;--shadow:0 4px 24px rgba(6,31,48,.19)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;font:14px/1.4 system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:#dcebf1}
@@ -55,6 +55,20 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 #emptyState b{display:block;font-size:15px}#emptyState span{color:#587080;font-size:12px;display:block}
 .emptyConnect{margin-top:10px;border:0;background:#007d75;color:#fff;border-radius:12px;padding:10px 17px;font-size:13px;font-weight:800}
 @media(max-width:370px){.brand strong{font-size:15px}.sourcesBtn{padding:6px;font-size:11px}.brandRight{gap:4px}.filter{padding:7px 9px}.header{padding:10px}.counter{font-size:11px}#notice{top:157px}}
+
+/* Le radar est d'abord une liste de demandes exploitables, pas une carte vide. */
+#map,#fallback,#fit,#emptyState,.mapactions,.close{display:none!important}
+#sheet,#sheet.open{display:flex;position:absolute;top:260px;left:12px;right:12px;
+ bottom:12px;margin:0 auto;max-width:700px;max-height:none;z-index:990;
+ flex-direction:column;border:1px solid var(--border);border-radius:17px;
+ background:#fff;box-shadow:var(--shadow)}
+#notice{max-height:68px;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.sheethead{padding:10px 14px}
+.sheethead strong{font-size:15px}
+#items{flex:1;padding:4px 10px 24px;min-height:0}
+.item{margin:7px 0;padding:12px}
+.header{max-width:700px}
+@media(max-width:370px){.counter{max-width:100px}}
 </style>
 </head>
 <body>
@@ -69,10 +83,10 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 <div id="emptyState"><b>Aucune demande détectée pour le moment</b><span id="emptyExplanation">Les flux publics ne garantissent pas de demandes locales. Active les alertes des plateformes de travaux dans Sources.</span><span id="emptyScanStatus" role="status" aria-live="polite"></span><button type="button" id="startSources" class="emptyConnect">Configurer les sources</button></div>
 <div class="mapactions"><button id="list" class="action" title="Voir les opportunités" aria-label="Voir la liste des opportunités">☷</button><button id="refresh" class="action primary" title="Actualiser les opportunités" aria-label="Relancer le radar">↻</button></div>
 <section id="sheet" role="dialog" aria-label="Détails des opportunités" aria-modal="false">
-  <div class="sheethead"><div><strong id="sheetTitle">Opportunités</strong><p id="sheetSub">Publications à vérifier</p></div><button class="close" id="close" aria-label="Fermer les détails">×</button></div>
+  <div class="sheethead"><div><strong id="sheetTitle">Demandes reçues</strong><p id="sheetSub">Les demandes les plus exploitables en premier</p></div><button class="close" id="close" aria-label="Fermer les détails">×</button></div>
   <div id="items"></div>
 </section>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
 <script>
 (function(){
   'use strict';
@@ -92,7 +106,13 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     return !q||[type,city,norm(o.source),norm(o.summary)].some(x=>x.includes(q));
   };
   const filtered=()=>all().filter(matches);
-  function positionNotice(){const h=document.querySelector('.header');if(h)$('notice').style.top=Math.ceil(h.getBoundingClientRect().bottom+9)+'px';}
+  function positionNotice(){
+    const h=document.querySelector('.header');
+    if(!h)return;
+    const top=Math.ceil(h.getBoundingClientRect().bottom+8);
+    $('notice').style.top=top+'px';
+    $('sheet').style.top=Math.ceil(top+Math.max(35,$('notice').getBoundingClientRect().height)+8)+'px';
+  }
   window.addEventListener('resize',positionNotice);
   function node(tag,cls,value){
     const e=document.createElement(tag);
@@ -134,7 +154,8 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     $('sheetSub').textContent=subtitle;
     $('items').replaceChildren();
     const sorted=entries.slice().sort((a,b)=>Number(Boolean(b.callback))-Number(Boolean(a.callback))||Number(Boolean(b.explicit))-Number(Boolean(a.explicit))||Number(b.score||0)-Number(a.score||0));
-    if(!sorted.length)$('items').appendChild(node('p','empty','Aucune opportunité avec ces filtres.'));
+    if(!sorted.length)$('items').appendChild(node('p','empty',
+      all().length===0?'Aucune annonce reçue. Les alertes de travaux des applications installées doivent être actives et autorisées sur Android.':'Aucune demande avec ce filtre. Essaie « Toutes » ou « À vérifier ».'));
     sorted.forEach(o=>$('items').appendChild(itemCard(o)));
     $('sheet').classList.add('open');
   }
@@ -161,28 +182,15 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     $('counter').textContent=validated+' besoin(s) · '+callableCount+' rappel(s)';
     $('counter').title=validated+' demandes explicites potentielles, dont '+callableCount+' avec téléphone et preuve de rappel';
     $('list').title='Voir '+entries.length+' opportunités';
-    const geolocated=entries.filter(o=>o.geo!==false).length;
-    $('notice').textContent=loading?'Recherche des sources en cours…':(scanStatus||(entries.length?geolocated+' dossier(s) placés · position approximative des communes':''));
+    $('notice').textContent=loading?'Vérification des sources accessibles…':(scanStatus||'Surveillance des alertes activées.');
     $('emptyState').style.display=entries.length?'none':'block';
     $('emptyExplanation').textContent=all().length===0?'Aucun dossier reçu. Les alertes officielles des applications choisies doivent être activées et autorisées sur Android.':mode==='requests'?'Aucune demande explicite parmi les dossiers reçus. Consulte « À vérifier ».':mode==='callbacks'?'Aucun particulier n’a encore demandé de rappel avec numéro enregistré.':'Aucune opportunité avec ces filtres.';
     // Le bandeau supérieur contient déjà le diagnostic complet.
     $('emptyScanStatus').textContent=loading?'Analyse en cours…':'';
-    if(map&&markers){
-      markers.clearLayers();
-      const bounds=[];
-      pins.forEach(p=>{const ll=cityPin(p);if(ll)bounds.push(ll)});
-      if(autoFit&&bounds.length)map.fitBounds(bounds,{paddingTopLeft:[35,190],paddingBottomRight:[35,65],maxZoom:11,animate:false});
-      else if(autoFit)map.fitBounds([[43.10,4.40],[43.95,5.95]],{padding:[20,20],maxZoom:9,animate:false});
-    }else{
-      $('fallbackItems').replaceChildren();
-      if(!entries.length)$('fallbackItems').appendChild(node('div','empty','Aucune opportunité détectée.'));
-      entries.slice().sort((a,b)=>Number(b.score)-Number(a.score)).forEach(o=>$('fallbackItems').appendChild(itemCard(o)));
-    }
-    if($('sheet').classList.contains('open')&&focused){
-      const p=pins.find(x=>x.city===focused);
-      if(p){const matching=p.opportunities.filter(matches);showSheet(p.city,matching.length+' dossier(s) · commune approximative',matching)}
-      else hideSheet();
-    }
+    // La liste est maintenant l'écran principal, sans chargement de carte.
+    focused=null;
+    showSheet('Demandes reçues',entries.length+' fiche(s) · rappels en premier',entries);
+    positionNotice();
   }
   window.renderRadar=function(payload){
     if(Array.isArray(payload))payload={pins:payload,unlocated:[]};
@@ -195,8 +203,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     }
     unlocated.forEach(o=>{o.geo=false;o.city=o.city||'Non localisée'});
     loading=false;$('refresh').disabled=false;
-    const missing=unlocated.length;
-    $('notice').textContent=missing?missing+' dossier(s) sans commune précise disponibles dans la liste.':'';
+
     draw(first);
     first=false;
   };
@@ -237,23 +244,8 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
       window.setRadarBusy(true);
     }
   });
-  try{
-    if(typeof L!=='undefined'){
-      map=L.map('map',{zoomControl:false,preferCanvas:true}).fitBounds([[43.10,4.40],[43.95,5.95]],{padding:[20,20],maxZoom:9});
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-        minZoom:7,maxZoom:17,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributeurs'
-      }).addTo(map);
-      L.control.zoom({position:'bottomleft'}).addTo(map);
-      markers=L.layerGroup().addTo(map);
-      map.on('click',hideSheet);
-    }else{
-      $('map').style.display='none';$('fallback').style.display='block';
-      $('notice').textContent='Fond de carte indisponible : la liste des demandes reste accessible.';
-    }
-  }catch(err){
-    $('map').style.display='none';$('fallback').style.display='block';
-    $('notice').textContent='La carte ne s’affiche pas : consultez les opportunités en liste.';
-  }
+  // Aucune carte chargée : les fiches sont immédiatement consultables.
+  $('sheet').classList.add('open');
   draw(true);
 })();
 </script>
