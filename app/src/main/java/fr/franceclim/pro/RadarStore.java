@@ -204,6 +204,27 @@ public final class RadarStore {
     return true;
   }
 
+  /** Référence à l'application ayant réellement émis une alerte choisie.
+   * Le nom du paquet Android est enregistré localement, sans jeton ni contact.
+   */
+  public static boolean setSourcePackageByFingerprint(Context c,String fingerprint,String packageName){
+    if(fingerprint==null||fingerprint.isEmpty()||
+       packageName==null||!packageName.matches("[a-zA-Z0-9_.]{3,160}"))return false;
+    synchronized(LOCK){
+      JSONArray records=leads(c);
+      for(int i=0;i<records.length();i++){
+        JSONObject item=records.optJSONObject(i);
+        if(item==null||!fingerprint.equals(item.optString("fingerprint")))continue;
+        try{
+          item.put("sourcePackage",packageName);
+          SecureLeadStore.save(c,records.toString());
+          return true;
+        }catch(Exception ignored){return false;}
+      }
+      return false;
+    }
+  }
+
   /** Suppression locale d'un dossier et des coordonnées associées. */
   public static boolean delete(Context c,int index){
     synchronized(LOCK){
