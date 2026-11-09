@@ -77,7 +77,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 <header class="header">
   <div class="brand"><div><strong>FRANCE CLIM <span style="color:#008f86">RADAR 13</span></strong><small>Opportunités de particuliers • Bouches-du-Rhône</small></div><div class="brandRight"><button class="sourcesBtn" id="sources" aria-label="Configurer les sources d'annonces">Sources ⚙</button><div class="counter" id="counter">0 piste</div></div></div>
   <div class="searchrow"><input id="search" type="search" placeholder="Rechercher une ville ou un besoin…" aria-label="Filtrer les opportunités"><button class="smallbutton" id="fit" title="Recentrer la carte" aria-label="Recentrer la carte">⌖</button></div>
-  <div class="filters" aria-label="Filtres"><button class="filter active" data-filter="requests">Demandes ciblées</button><button class="filter" data-filter="callbacks">☎ Rappels</button><button class="filter" data-filter="review">À vérifier</button><button class="filter" data-filter="high">🔥 Prioritaires</button><button class="filter" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button></div>
+  <div class="filters" aria-label="Filtres"><button class="filter" data-filter="requests">Demandes ciblées</button><button class="filter" data-filter="callbacks">☎ Rappels</button><button class="filter" data-filter="review">À vérifier</button><button class="filter" data-filter="high">🔥 Prioritaires</button><button class="filter active" data-filter="all">Toutes</button><button class="filter" data-filter="clim">❄️ Clim</button><button class="filter" data-filter="eau">💧 Chauffe-eau</button></div>
 </header>
 <div id="notice" role="status" aria-live="polite">Chargement des opportunités…</div>
 <div id="emptyState"><b>Aucune demande détectée pour le moment</b><span id="emptyExplanation">Les flux publics ne garantissent pas de demandes locales. Active les alertes des plateformes de travaux dans Sources.</span><span id="emptyScanStatus" role="status" aria-live="polite"></span><button type="button" id="startSources" class="emptyConnect">Configurer les sources</button></div>
@@ -91,7 +91,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
-  let pins=[],unlocated=[],mode='requests',term='',map=null,markers=null,first=true,focused=null,loading=false,scanStatus='',callableCount=0;
+  let pins=[],unlocated=[],mode='all',term='',map=null,markers=null,first=true,focused=null,loading=false,scanStatus='',callableCount=0;
   const all=()=>pins.flatMap(p=>Array.isArray(p.opportunities)?p.opportunities:[]).concat(unlocated);
   const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const matches=o=>{
@@ -127,7 +127,9 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     const score=Number(o.score)||0;
     top.appendChild(node('span','score'+(score>=75?' high':''),score+'/100'));
     card.appendChild(top);
-    const meta=node('div','meta','Source : '+String(o.source||'Non précisée'));
+    const date=Number(o.date)||0;
+    const when=date>0?' · '+new Date(date).toLocaleDateString('fr-FR'):'';
+    const meta=node('div','meta','Source : '+String(o.source||'Non précisée')+when);
     card.appendChild(meta);
     card.appendChild(node('p','summary',String(o.summary||'Demande à vérifier')));
     const actions=node('div','itemactions');
@@ -153,7 +155,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     $('sheetTitle').textContent=title;
     $('sheetSub').textContent=subtitle;
     $('items').replaceChildren();
-    const sorted=entries.slice().sort((a,b)=>Number(Boolean(b.callback))-Number(Boolean(a.callback))||Number(Boolean(b.explicit))-Number(Boolean(a.explicit))||Number(b.score||0)-Number(a.score||0));
+    const sorted=entries.slice().sort((a,b)=>Number(Boolean(b.callback))-Number(Boolean(a.callback))||Number(Boolean(b.explicit))-Number(Boolean(a.explicit))||Number(b.date||0)-Number(a.date||0)||Number(b.score||0)-Number(a.score||0));
     if(!sorted.length)$('items').appendChild(node('p','empty',
       all().length===0?'Aucune annonce reçue. Les alertes de travaux des applications installées doivent être actives et autorisées sur Android.':'Aucune demande avec ce filtre. Essaie « Toutes » ou « À vérifier ».'));
     sorted.forEach(o=>$('items').appendChild(itemCard(o)));
