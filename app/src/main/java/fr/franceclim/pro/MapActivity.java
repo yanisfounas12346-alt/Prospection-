@@ -75,6 +75,7 @@ public class MapActivity extends Activity {
          !=PackageManager.PERMISSION_GRANTED){
       requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},3301);
     }
+    PlatformSources.activateInstalled(this);
     RadarJobService.schedule(this);
     web=new WebView(this);
     WebSettings settings=web.getSettings();
@@ -150,6 +151,7 @@ public class MapActivity extends Activity {
   }
   @Override protected void onResume(){
     super.onResume();
+    PlatformSources.activateInstalled(this);
     if(prefs!=null&&pageReady)recalculate();
     // Au retour d'une autre application, actualiser si la dernière tentative date
     // de plus de cinq minutes. Le verrou scanning évite les scans concurrents.
@@ -314,8 +316,9 @@ public class MapActivity extends Activity {
     String source=prefs.getString("notification_last_source","—");
     Set<String> platforms=prefs.getStringSet("watched_marketplace_packages",
       Collections.<String>emptySet());
-    String status="Permission de notifications : "+(notificationAccess()?"ACTIVE":"NON ACTIVÉE")
-      +"\\nLeboncoin : "+(prefs.getBoolean("watch_lbc",true)?"choisi":"désactivé")
+    String status="Applications de travaux détectées automatiquement : "+prefs.getInt("auto_platforms_found",0)
+      +"\\nPermission de notifications : "+(notificationAccess()?"ACTIVE":"NON ACTIVÉE")
+      +"\\nLeboncoin : "+(prefs.getBoolean("watch_lbc",false)?"choisi":"non détecté")
       +"\\nFacebook : "+(prefs.getBoolean("watch_fb",false)?"choisi":"désactivé")
       +"\\nAutres plateformes installées : "+platforms.size()
       +"\\nMastodon : "+(prefs.getBoolean("watch_mastodon",false)?"actif":"désactivé")
