@@ -45,7 +45,7 @@ public final class RadarScanner {
     // Flux RSS PUBLICS fournis nativement par Mastodon pour ses hashtags.
     // Ils ne donnent accès qu'aux publications publiques du réseau indiqué.
     StringBuilder all=new StringBuilder();
-    if(prefs.getBoolean("watch_mastodon",true)){
+    if(prefs.getBoolean("watch_mastodon",false)){
       all.append("https://mastodon.social/tags/climatisation.rss\n");
       all.append("https://mastodon.social/tags/chauffeeau.rss\n");
     }
