@@ -152,6 +152,12 @@ public class MapActivity extends Activity {
   @Override protected void onResume(){
     super.onResume();
     PlatformSources.activateInstalled(this);
+    // Android exige une permission spéciale : une seule invitation explicative.
+    if(prefs!=null&&!notificationAccess()&&
+       !prefs.getBoolean("source_listener_permission_prompted",false)){
+      prefs.edit().putBoolean("source_listener_permission_prompted",true).apply();
+      requestNotificationAccess();
+    }
     if(prefs!=null&&pageReady)recalculate();
     // Au retour d'une autre application, actualiser si la dernière tentative date
     // de plus de cinq minutes. Le verrou scanning évite les scans concurrents.
@@ -219,7 +225,7 @@ public class MapActivity extends Activity {
   }
   private void requestNotificationAccess(){
     new AlertDialog.Builder(this).setTitle("Permission Android")
-      .setMessage("Android accorde un accès large aux notifications. Le radar ne traite que les applications de travaux sélectionnées. Les conversations WhatsApp, e-mails et messageries personnelles sont exclues.")
+      .setMessage("Pour recevoir automatiquement les annonces des plateformes de travaux détectées, Android demande ton autorisation une fois. Le radar filtre les applications reconnues ; il exclut les conversations WhatsApp, e-mails et messages privés.")
       .setPositiveButton("Ouvrir les paramètres",(dlg,w)->{
         try{startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));}
         catch(Exception ex){Toast.makeText(this,"Paramètres indisponibles",Toast.LENGTH_LONG).show();}
