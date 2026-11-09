@@ -18,6 +18,24 @@ import java.util.Locale;
  */
 public class RadarNotificationListener extends NotificationListenerService {
   private static final String CHANNEL="radar_opportunities";
+  @Override public void onListenerConnected(){
+    super.onListenerConnected();
+    // Reprise des notifications encore visibles lorsque Android reconnecte
+    // le service. Le stockage est dédoublonné par RadarStore.
+    try {
+      StatusBarNotification[] active=getActiveNotifications();
+      if(active!=null){
+        int checked=0;
+        for(StatusBarNotification sbn:active){
+          if(checked++>=100)break;
+          onNotificationPosted(sbn);
+        }
+      }
+    }catch(SecurityException ignored){
+      // Certains appareils empêchent la lecture des notifications existantes.
+    }
+  }
+
   @Override public void onNotificationPosted(StatusBarNotification sbn){
     if(sbn==null||!RadarStore.enabled(this,sbn.getPackageName()))return;
     Notification original=sbn.getNotification();
@@ -32,28 +50,9 @@ public class RadarNotificationListener extends NotificationListenerService {
     String full=text.toString().trim();
     if(full.length()<12)return;
 
-    // Never scan Facebook private DMs, contacts, comments or other unrelated notices.
-    if("com.facebook.katana".equals(sbn.getPackageName())){
-      String n=LeadClassifier.normalize(full);
-      if(!(n.contains(" publie dans ")||n.contains(" publication dans ")||n.contains(" posted in ")||
-            n.contains(" dans le groupe ")||n.contains(" group ")||n.contains(" groupe ")))return;
-    }
     String pkg=sbn.getPackageName();
-    if(!"fr.leboncoin".equals(pkg)&&!"com.facebook.katana".equals(pkg)){
-      // Les demandes publiques ou avis de nouvelles annonces uniquement ; jamais les
-      // notifications de conversation privée, paiement, messagerie ou compte.
-      String n=LeadClassifier.normalize(title+" "+summary+" "+big);
-      if(!(n.contains(" demande ")||n.contains(" recherche ")||
-           n.contains(" annonce ")||n.contains(" chantier ")||
-           n.contains(" un voisin ")||n.contains(" besoin ")||
-           n.contains(" nouvelle mission ")||n.contains(" nouveau projet ")||
-           n.contains(" sollicitation ")||n.contains(" intervention ")||
-           n.contains(" votre secteur ")||n.contains(" votre zone ")))return;
-      if(n.contains(" message prive ")||n.contains(" votre conversation ")||
-         n.contains(" paiement ")||n.contains(" connexion a votre compte ")||
-         n.contains(" verification de compte ")||n.contains(" nouveau commentaire ")||
-         n.contains(" code de connexion ")||n.contains(" renouvellement abonnement "))return;
-    }
+    if(!PlatformAlertRules.accept(pkg,title,full))return;
+
     String source;
     if("fr.leboncoin".equals(pkg))source="Alerte Leboncoin";
     else if("com.facebook.katana".equals(pkg))source="Publication de groupe Facebook";
