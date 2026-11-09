@@ -164,14 +164,15 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
     const geolocated=entries.filter(o=>o.geo!==false).length;
     $('notice').textContent=loading?'Recherche des sources en cours…':(scanStatus||(entries.length?geolocated+' dossier(s) placés · position approximative des communes':''));
     $('emptyState').style.display=entries.length?'none':'block';
-    $('emptyExplanation').textContent=mode==='requests'?'Aucune demande explicite détectée. Les publications vagues sont conservées dans « À vérifier ».':mode==='callbacks'?'Aucune fiche avec téléphone et demande de rappel documentée.':'Aucune opportunité avec ces filtres.';
-    $('emptyScanStatus').textContent=loading?'Analyse en cours…':scanStatus;
+    $('emptyExplanation').textContent=all().length===0?'Aucun dossier reçu. Les alertes officielles des applications choisies doivent être activées et autorisées sur Android.':mode==='requests'?'Aucune demande explicite parmi les dossiers reçus. Consulte « À vérifier ».':mode==='callbacks'?'Aucun particulier n’a encore demandé de rappel avec numéro enregistré.':'Aucune opportunité avec ces filtres.';
+    // Le bandeau supérieur contient déjà le diagnostic complet.
+    $('emptyScanStatus').textContent=loading?'Analyse en cours…':'';
     if(map&&markers){
       markers.clearLayers();
       const bounds=[];
       pins.forEach(p=>{const ll=cityPin(p);if(ll)bounds.push(ll)});
       if(autoFit&&bounds.length)map.fitBounds(bounds,{paddingTopLeft:[35,190],paddingBottomRight:[35,65],maxZoom:11,animate:false});
-      else if(autoFit)map.setView([43.48,5.12],9,{animate:false});
+      else if(autoFit)map.fitBounds([[43.10,4.40],[43.95,5.95]],{padding:[20,20],maxZoom:9,animate:false});
     }else{
       $('fallbackItems').replaceChildren();
       if(!entries.length)$('fallbackItems').appendChild(node('div','empty','Aucune opportunité détectée.'));
@@ -238,7 +239,7 @@ button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus
   });
   try{
     if(typeof L!=='undefined'){
-      map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([43.48,5.12],9);
+      map=L.map('map',{zoomControl:false,preferCanvas:true}).fitBounds([[43.10,4.40],[43.95,5.95]],{padding:[20,20],maxZoom:9});
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
         minZoom:7,maxZoom:17,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributeurs'
       }).addTo(map);
