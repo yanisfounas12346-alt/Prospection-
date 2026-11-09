@@ -428,12 +428,30 @@ public class MapActivity extends Activity {
       try {
         RadarScanner.Report rss=RadarScanner.scan(getApplicationContext());
         prefs.edit().putString("last_scan_failures",rss.failedSources).apply();
-        status=(rss.errors>0?"COUVERTURE INCOMPLÈTE — source RSS indisponible. ":
-          "Veille des flux autorisés terminée. ")+
-          "RSS : "+rss.checked+" publications / "+rss.errors+" erreur(s) ; "+
-          rss.added+" nouvelle(s) piste(s) potentielles. "+
-          "Les annonces des plateformes dépendent de leurs alertes activées ; "+
-          "un numéro public ne vaut pas autorisation de rappel.";
+        Set<String> apps=prefs.getStringSet("watched_marketplace_packages",
+          Collections.<String>emptySet());
+        int chosen=apps.size()+
+          (prefs.getBoolean("watch_lbc",false)?1:0)+
+          (prefs.getBoolean("watch_fb",false)?1:0);
+        boolean permitted=notificationAccess();
+        if(chosen==0&&rss.feeds==0){
+          status="AUCUNE SOURCE ACTIVE : sélectionne les applications de travaux "+
+            "dans Sources, puis active leurs alertes officielles.";
+        }else if(chosen>0&&!permitted&&rss.feeds==0){
+          status="INGESTION BLOQUÉE : "+chosen+
+            " application(s) choisie(s), mais accès aux notifications Android "+
+            "non autorisé. Ouvre Sources pour l'activer.";
+        }else{
+          status=(rss.errors>0?"COUVERTURE PARTIELLE : une source RSS a échoué. ":
+            "Surveillance configurée. ")+
+            chosen+" application(s) de travaux choisie(s)"+
+            (permitted?" ; accès aux notifications autorisé. ":
+              " ; accès aux notifications non autorisé. ")+
+            rss.feeds+" flux RSS ; "+rss.checked+" publication(s) lue(s), "+
+            rss.errors+" erreur(s). "+
+            "Les plateformes ne transmettent que leurs propres alertes : "+
+            "aucune garantie de couverture exhaustive.";
+        }
       }catch(Exception e){status="Certaines sources sont indisponibles. Les dossiers déjà enregistrés restent visibles.";}
       final String note=status;
       scanning.set(false);
