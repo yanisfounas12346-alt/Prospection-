@@ -225,7 +225,7 @@ public final class RadarStore {
   }
   /** Notifications d'applications de demandes de travaux choisies explicitement. */
   public static boolean enabled(Context c,String pkg){
-    if("fr.leboncoin".equals(pkg))return prefs(c).getBoolean("watch_lbc",true);
+    if("fr.leboncoin".equals(pkg))return prefs(c).getBoolean("watch_lbc",false);
     if("com.facebook.katana".equals(pkg))return prefs(c).getBoolean("watch_fb",false);
     if(pkg==null || pkg.isEmpty())return false;
     // Les messageries personnelles, e-mails et applications système sont exclues.
