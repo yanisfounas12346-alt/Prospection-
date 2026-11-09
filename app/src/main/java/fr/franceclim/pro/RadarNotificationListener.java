@@ -66,6 +66,8 @@ public class RadarNotificationListener extends NotificationListenerService {
       source="Alerte "+appLabel.substring(0,Math.min(65,appLabel.length()));
     }
     RadarStore.AddResult added=RadarStore.add(this,full,"",source);
+    if(added.added)RadarStore.setSourcePackageByFingerprint(
+      this,added.fingerprint,pkg);
     // Journal de diagnostic minimal : aucun texte, contact ou nom de personne.
     android.content.SharedPreferences prefs=getSharedPreferences("franceclim",MODE_PRIVATE);
     int total=prefs.getInt("notification_checked",0);
