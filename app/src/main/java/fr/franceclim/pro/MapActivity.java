@@ -394,6 +394,15 @@ public class MapActivity extends Activity {
     if(link.startsWith("https://")){
       dlg.setPositiveButton("Publication d'origine",
         (d,which)->openExternal(Uri.parse(link)));
+    }else{
+      String sourcePackage=lead.optString("sourcePackage","");
+      if(sourcePackage.matches("[a-zA-Z0-9_.]{3,160}")){
+        Intent sourceIntent=getPackageManager().getLaunchIntentForPackage(sourcePackage);
+        if(sourceIntent!=null){
+          dlg.setPositiveButton("Ouvrir la plateforme",
+            (d,which)->startActivity(sourceIntent));
+        }
+      }
     }
     if(!phone.isEmpty()&&lead.optBoolean("callbackRequested",false)&&
        lead.optString("callbackEvidence","").trim().length()>=8){
