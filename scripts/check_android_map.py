@@ -29,6 +29,16 @@ def main():
         raise SystemExit("Fichiers privés non protégés contre les accès externes")
     if "fallbackCenters()" not in java or "GEO_JSON" not in java:
         raise SystemExit("Cache ou centres de secours manquants")
+    # Android AlertDialog.Builder: setMessage and setItems/setMultiChoiceItems
+    # compete for the content panel. A message hides the selectable list.
+    sources_dialog = java.split("private void showSources(){", 1)[1].split(
+        "private boolean notificationAccess()", 1)[0]
+    marketplace_dialog = java.split("private void chooseMarketplaces(){", 1)[1].split(
+        "private void editFeeds()", 1)[0]
+    if ".setMessage(" in sources_dialog or ".setItems(choices" not in sources_dialog:
+        raise SystemExit("Menu Sources inaccessible : liste masquée par un message")
+    if ".setMessage(" in marketplace_dialog or ".setMultiChoiceItems(" not in marketplace_dialog:
+        raise SystemExit("Sélection des plateformes inaccessible : cases masquées")
     scripts = re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script>", html)
     scripts = [script for script in scripts if script.strip()]
     if len(scripts) != 1:
