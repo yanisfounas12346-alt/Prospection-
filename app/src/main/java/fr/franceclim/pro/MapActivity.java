@@ -507,6 +507,7 @@ public class MapActivity extends Activity {
           preview.put("callback",callback);
           preview.put("score",Math.max(0,Math.min(100,fresh.eligible?fresh.score:lead.optInt("score",0))));
           preview.put("source",lead.optString("source",""));
+          preview.put("date",lead.optLong("date",0));
           preview.put("city",rawCity);
           // Les messages de formulaires directs peuvent contenir des données privées.
           String snippet=(source.contains("formulaire")||source.contains("csv")||
