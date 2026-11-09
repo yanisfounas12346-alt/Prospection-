@@ -200,7 +200,6 @@ public class MapActivity extends Activity {
       "StarOfService — demandes de devis clients"
     };
     new AlertDialog.Builder(this).setTitle("Sources des opportunités")
-      .setMessage("Après activation, les nouvelles alertes des plateformes choisies entrent automatiquement dans tes dossiers. La collecte dépend des notifications réellement envoyées par chaque plateforme et ne lit pas les messages privés.")
       .setItems(choices,(dlg,selection)->{
         switch(selection){
           case 0:requestNotificationAccess();break;
@@ -268,7 +267,6 @@ public class MapActivity extends Activity {
       else checked[i]=selected.contains(id);
     }
     new AlertDialog.Builder(this).setTitle("Applications de demandes")
-      .setMessage("Sélectionne les applications de travaux installées puis active leurs alertes officielles par métier et par commune. Le radar enregistre automatiquement leurs nouvelles demandes lorsque les notifications arrivent. Aucune messagerie privée n'est lue.")
       .setMultiChoiceItems(names.toArray(new String[0]),checked,(d,index,on)->checked[index]=on)
       .setPositiveButton("Enregistrer",(d,w)->{
         Set<String> picked=new LinkedHashSet<>();
