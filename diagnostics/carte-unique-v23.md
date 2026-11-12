@@ -1,0 +1,1 @@
+Validation Android de l'interface carte unique avec opportunités et actualisation.
